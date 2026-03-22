@@ -42,7 +42,7 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
 #datetime { font-family: var(--mono); font-size: 11px; color: var(--text3); text-align: right; line-height: 1.6; }
 
 /* ── HUD ── */
-#hud { position: fixed; top: 60px; left: 50%; transform: translateX(-50%);
+#hud { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
   display: flex; gap: 8px; z-index: 100; flex-wrap: wrap; justify-content: center; padding: 0 12px; }
 .pill { background: rgba(8,13,26,0.92); border: 1px solid var(--border); border-radius: 20px;
   padding: 5px 12px; font-family: var(--mono); font-size: 11px; color: var(--text2);
@@ -59,20 +59,22 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
 #crosshair::after  { top: 50%; left: 0; height: 1px; width: 100%; }
 .ch-ring { position: absolute; inset: 8px; border: 1px solid rgba(79,142,255,0.4); border-radius: 50%; }
 
-/* ── Aufnahme-Bereich ── */
-#rec-area { position: fixed; bottom: 0; left: 0; right: 0; padding: 0 24px 40px;
-  display: flex; flex-direction: column; align-items: center; gap: 14px;
-  background: linear-gradient(to top, rgba(4,6,15,0.98), rgba(4,6,15,0.8) 60%, transparent); z-index: 100; }
-#rec-hint { font-size: 12px; color: var(--text3); letter-spacing: .06em; font-family: var(--mono); text-transform: uppercase; }
-#rec-stats { display: none; flex-direction: row; gap: 16px; font-family: var(--mono); font-size: 12px; color: var(--text2); flex-wrap: wrap; justify-content: center; }
+/* ── Aufnahme-Bereich — oberes Drittel, aber unter dem HUD ── */
+#rec-area { position: fixed; top: 130px; left: 0; right: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  z-index: 100; pointer-events: none; }
+#rec-area > * { pointer-events: auto; }
+#rec-hint { font-size: 11px; color: var(--text3); letter-spacing: .06em; font-family: var(--mono); text-transform: uppercase; }
+#rec-stats { display: none; flex-direction: row; gap: 14px; font-family: var(--mono); font-size: 11px; color: var(--text2); flex-wrap: wrap; justify-content: center; }
 #rec-stats.on { display: flex; }
 #rec-stats b { color: var(--accent2); }
-#rec-btn { width: 80px; height: 80px; border-radius: 50%; background: transparent;
+#rec-btn { width: 72px; height: 72px; border-radius: 50%; background: rgba(4,6,15,0.6);
   border: 2px solid var(--accent); cursor: pointer; position: relative;
-  transition: transform .15s, border-color .15s; display: flex; align-items: center; justify-content: center; }
-#rec-btn::before { content: ''; width: 48px; height: 48px; border-radius: 50%; background: var(--accent); transition: background .15s; }
+  transition: transform .15s, border-color .15s; display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px); }
+#rec-btn::before { content: ''; width: 44px; height: 44px; border-radius: 50%; background: var(--accent); transition: background .15s; }
 #rec-btn.rec { border-color: var(--red); animation: pulse 1s ease-in-out infinite; }
-#rec-btn.rec::before { background: var(--red); border-radius: 6px; width: 28px; height: 28px; }
+#rec-btn.rec::before { background: var(--red); border-radius: 6px; width: 26px; height: 26px; }
 @keyframes pulse { 0%,100%{ box-shadow: 0 0 0 0 rgba(255,107,107,0.4); } 50%{ box-shadow: 0 0 0 14px rgba(255,107,107,0); } }
 #rec-btn:active { transform: scale(0.93); }
 
@@ -83,8 +85,8 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
   opacity: 0; transition: opacity .3s, transform .3s; z-index: 300; white-space: nowrap; pointer-events: none; }
 #toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* ── Listen-Button ── */
-#list-btn { position: fixed; bottom: 160px; right: 20px; display: none;
+/* ── Listen-Button — unten rechts ── */
+#list-btn { position: fixed; bottom: 30px; right: 20px; display: none;
   background: rgba(8,13,26,0.85); border: 1px solid var(--border); border-radius: 20px;
   padding: 8px 14px; font-family: var(--mono); font-size: 10px; color: var(--text2);
   letter-spacing: .08em; z-index: 150; cursor: pointer; backdrop-filter: blur(8px); }
@@ -213,6 +215,96 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
   <div class="pill"><div class="dot off" id="s-dot"></div><span id="az-hud">AZ <b>—</b></span></div>
   <div class="pill"><span id="el-hud">EL <b>—</b></span></div>
   <div class="pill"><span id="gps-hud">GPS <b>—</b></span></div>
+  <div class="pill" onclick="toggleDebug()" style="cursor:pointer;color:var(--text3);">DBG</div>
+</div>
+
+<!-- Debug-Panel -->
+<div id="debug-panel" style="display:none;position:fixed;bottom:140px;left:0;right:0;z-index:160;
+  margin:0 12px;background:rgba(4,6,15,0.95);border:1px solid var(--border);border-radius:12px;
+  padding:14px 16px;font-family:var(--mono);font-size:11px;backdrop-filter:blur(12px);max-height:60vh;overflow-y:auto;">
+
+  <div style="display:flex;justify-content:space-between;margin-bottom:10px;align-items:center;">
+    <span style="color:var(--accent2);font-size:10px;letter-spacing:.1em;">SENSOR DEBUG</span>
+    <span id="dbg-mode" style="font-size:9px;padding:2px 8px;border-radius:10px;
+      background:rgba(79,142,255,0.12);color:var(--accent2);">—</span>
+  </div>
+
+  <!-- Berechnete Werte -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+    <div style="background:rgba(79,142,255,0.06);border-radius:8px;padding:8px 10px;">
+      <div style="color:var(--text3);font-size:9px;margin-bottom:3px;">AZIMUT</div>
+      <div style="color:var(--accent2);font-size:18px;" id="dbg-az">—</div>
+      <div style="color:var(--text3);font-size:9px;margin-top:2px;" id="dbg-az-dir">—</div>
+    </div>
+    <div style="background:rgba(78,207,138,0.06);border-radius:8px;padding:8px 10px;">
+      <div style="color:var(--text3);font-size:9px;margin-bottom:3px;">ELEVATION</div>
+      <div style="color:var(--green);font-size:18px;" id="dbg-el">—</div>
+      <div style="color:var(--text3);font-size:9px;margin-top:2px;" id="dbg-el-hint">—</div>
+    </div>
+  </div>
+
+  <!-- Kalibrierungsanleitung -->
+  <div style="border-top:1px solid var(--border);padding-top:10px;margin-bottom:10px;">
+    <div style="color:var(--text3);font-size:9px;letter-spacing:.08em;margin-bottom:6px;">KALIBRIERUNGSTEST</div>
+    <div id="dbg-test" style="color:var(--text2);font-size:11px;line-height:1.7;"></div>
+  </div>
+
+  <!-- Rohdaten -->
+  <div style="border-top:1px solid var(--border);padding-top:10px;">
+    <div style="color:var(--text3);font-size:9px;letter-spacing:.08em;margin-bottom:6px;">ROHDATEN</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
+      <div style="text-align:center;">
+        <div style="color:var(--text3);font-size:8px;">qW</div>
+        <div style="color:var(--text2);font-size:10px;" id="dbg-qw">—</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="color:var(--text3);font-size:8px;">qX</div>
+        <div style="color:var(--text2);font-size:10px;" id="dbg-qx">—</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="color:var(--text3);font-size:8px;">qY</div>
+        <div style="color:var(--text2);font-size:10px;" id="dbg-qy">—</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="color:var(--text3);font-size:8px;">qZ</div>
+        <div style="color:var(--text2);font-size:10px;" id="dbg-qz">—</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:6px;">
+      <div style="text-align:center;">
+        <div style="color:var(--text3);font-size:8px;">alpha °</div>
+        <div style="color:var(--text2);font-size:10px;" id="dbg-alpha">—</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="color:var(--text3);font-size:8px;">beta °</div>
+        <div style="color:var(--text2);font-size:10px;" id="dbg-beta">—</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="color:var(--text3);font-size:8px;">gamma °</div>
+        <div style="color:var(--text2);font-size:10px;" id="dbg-gamma">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kalibrierungsstatus-Balken -->
+  <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:10px;">
+    <div style="color:var(--text3);font-size:9px;letter-spacing:.08em;margin-bottom:6px;">STABILITÄT (letzte 20 Werte)</div>
+    <div style="display:flex;gap:6px;">
+      <div style="flex:1;">
+        <div style="color:var(--text3);font-size:8px;">AZ Jitter</div>
+        <div style="height:4px;background:var(--bg2);border-radius:2px;margin-top:3px;">
+          <div id="dbg-jitter-az" style="height:4px;border-radius:2px;background:var(--accent);width:0%;transition:width .3s;"></div>
+        </div>
+      </div>
+      <div style="flex:1;">
+        <div style="color:var(--text3);font-size:8px;">EL Jitter</div>
+        <div style="height:4px;background:var(--bg2);border-radius:2px;margin-top:3px;">
+          <div id="dbg-jitter-el" style="height:4px;border-radius:2px;background:var(--green);width:0%;transition:width .3s;"></div>
+        </div>
+      </div>
+    </div>
+    <div style="color:var(--text3);font-size:9px;margin-top:4px;" id="dbg-jitter-txt">—</div>
+  </div>
 </div>
 
 <!-- Aufnahme -->
@@ -230,13 +322,13 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
 <div id="toast"></div>
 <button id="list-btn" onclick="openList()">SICHTUNGEN ▸</button>
 
-<!-- Gerätehaltung Info-Button -->
-<button onclick="showHoldingInfo()" style="position:fixed;bottom:162px;left:20px;z-index:150;
+<!-- Gerätehaltung Info-Button — unten links -->
+<button onclick="showHoldingInfo()" style="position:fixed;bottom:30px;left:20px;z-index:150;
   background:rgba(8,13,26,0.85);border:1px solid var(--border);border-radius:20px;
   padding:8px 14px;font-family:var(--mono);font-size:10px;color:var(--text2);cursor:pointer;
   backdrop-filter:blur(8px);">? Haltung</button>
 
-<!-- Sensor-Warnung (erscheint nach 3s wenn kein Sensor) -->
+<!-- Sensor-Warnung -->
 <div id="sensor-warn" style="display:none;position:fixed;inset:0;z-index:180;
   background:rgba(4,6,15,0.88);align-items:center;justify-content:center;padding:24px;">
   <div style="background:var(--bg2);border:1px solid rgba(255,107,107,0.5);border-radius:16px;
@@ -247,17 +339,11 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
     <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:16px;">
       Das Gyroskop/Kompass-Sensor ist nicht aktiv. Mögliche Ursachen:<br><br>
       <b style="color:var(--text);">1. Datei lokal geöffnet (file://)</b><br>
-      Sensoren funktionieren nur über HTTPS. Lade die Datei auf einen Webserver oder nutze z.B. GitHub Pages.<br><br>
+      Sensoren funktionieren nur über HTTPS. Lade die Datei auf einen Webserver (z.B. Netlify Drop).<br><br>
       <b style="color:var(--text);">2. iOS — Berechtigung fehlt</b><br>
       Einstellungen → Safari → Bewegung &amp; Ausrichtung → aktivieren.<br><br>
       <b style="color:var(--text);">3. Desktop-Browser</b><br>
-      Hier läuft die Maus-Simulation — das ist kein Fehler, aber für echte Messungen brauchst du das Smartphone.
-    </div>
-    <div style="font-size:12px;color:var(--text3);margin-bottom:16px;padding:10px;
-      background:rgba(79,142,255,0.08);border-radius:8px;font-family:var(--mono);">
-      GPS wird NUR für den Standort benötigt,<br>
-      nicht für den Meteor-Pfad!<br>
-      Pfad = Gyroskop · Standort = GPS
+      Auf dem Desktop läuft die Maus-Simulation. Für echte Messungen das Smartphone verwenden.
     </div>
     <button onclick="dismissSensorWarn()" style="width:100%;padding:12px;border-radius:10px;
       background:var(--accent);border:none;color:white;font-family:var(--mono);font-size:13px;cursor:pointer;">
@@ -636,24 +722,189 @@ navigator.geolocation && navigator.geolocation.getCurrentPosition(
 );
 
 // ══════════════════════════════════════════
-// SENSOREN
+// SENSOREN — Quaternion-basiert
+// Gerät hochkant, Kamera oben zeigt zum Meteor.
+// Wir berechnen wohin die Kamera-Achse (0,1,0 im Gerätekoordinatensystem)
+// im Weltkoordinatensystem zeigt → daraus Azimut + Elevation.
 // ══════════════════════════════════════════
+
+// Quaternion q rotiert Vektor v: q * v * q_conj
+function quatRotate(q, v) {
+  const [qw,qx,qy,qz] = q;
+  const [vx,vy,vz] = v;
+  // t = 2 * cross(q.xyz, v)
+  const tx = 2*(qy*vz - qz*vy);
+  const ty = 2*(qz*vx - qx*vz);
+  const tz = 2*(qx*vy - qy*vx);
+  return [
+    vx + qw*tx + qy*tz - qz*ty,
+    vy + qw*ty + qz*tx - qx*tz,
+    vz + qw*tz + qx*ty - qy*tx
+  ];
+}
+
+// Kamera-Achse im Geräte-KS: die Oberkante des hochkant gehaltenen Geräts
+// Bei hochkantem Gerät zeigt die Y-Achse des Bildschirms nach oben = zur Kamera
+// Im Sensor-KS (screen-coordinates): [0, 1, 0]
+const CAM_AXIS = [0, 1, 0];
+
+// ── Debug ──
+let dbgVisible = false;
+let dbgHistory = { az:[], el:[] };
+let dbgRaw = { qw:0, qx:0, qy:0, qz:0, alpha:0, beta:0, gamma:0 };
+let dbgMode = '—';
+
+function toggleDebug() {
+  dbgVisible = !dbgVisible;
+  document.getElementById('debug-panel').style.display = dbgVisible ? 'block' : 'none';
+}
+
+function updateDebug() {
+  if (!dbgVisible) return;
+  const dirs = ['N','NNO','NO','ONO','O','OSO','SO','SSO','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  const dir = dirs[Math.round(S.az/22.5)%16];
+
+  let elHint = '';
+  if (S.el < 5)       elHint = 'Horizont — Gerät waagerecht?';
+  else if (S.el < 20) elHint = 'Flach nach oben';
+  else if (S.el < 50) elHint = 'Schräg nach oben';
+  else if (S.el < 80) elHint = 'Steil nach oben';
+  else                elHint = 'Fast senkrecht';
+
+  document.getElementById('dbg-az').textContent     = S.az.toFixed(1) + '°';
+  document.getElementById('dbg-az-dir').textContent = dir;
+  document.getElementById('dbg-el').textContent     = S.el.toFixed(1) + '°';
+  document.getElementById('dbg-el-hint').textContent= elHint;
+  document.getElementById('dbg-mode').textContent   = dbgMode;
+
+  document.getElementById('dbg-qw').textContent    = dbgRaw.qw.toFixed(3);
+  document.getElementById('dbg-qx').textContent    = dbgRaw.qx.toFixed(3);
+  document.getElementById('dbg-qy').textContent    = dbgRaw.qy.toFixed(3);
+  document.getElementById('dbg-qz').textContent    = dbgRaw.qz.toFixed(3);
+  document.getElementById('dbg-alpha').textContent = dbgRaw.alpha.toFixed(1);
+  document.getElementById('dbg-beta').textContent  = dbgRaw.beta.toFixed(1);
+  document.getElementById('dbg-gamma').textContent = dbgRaw.gamma.toFixed(1);
+
+  // Jitter-Berechnung
+  dbgHistory.az.push(S.az); dbgHistory.el.push(S.el);
+  if (dbgHistory.az.length > 20) { dbgHistory.az.shift(); dbgHistory.el.shift(); }
+  if (dbgHistory.az.length > 2) {
+    const jAz = Math.max(...dbgHistory.az) - Math.min(...dbgHistory.az);
+    const jEl = Math.max(...dbgHistory.el) - Math.min(...dbgHistory.el);
+    const pAz = Math.min(100, jAz * 5);
+    const pEl = Math.min(100, jEl * 5);
+    document.getElementById('dbg-jitter-az').style.width = pAz + '%';
+    document.getElementById('dbg-jitter-el').style.width = pEl + '%';
+    document.getElementById('dbg-jitter-az').style.background = jAz < 2 ? '#4ecf8a' : jAz < 10 ? '#f0b840' : '#ff6b6b';
+    document.getElementById('dbg-jitter-el').style.background = jEl < 2 ? '#4ecf8a' : jEl < 10 ? '#f0b840' : '#ff6b6b';
+    const qual = (jAz < 2 && jEl < 2) ? '✓ Gut — stabil' : (jAz < 10 && jEl < 10) ? '~ Mäßig' : '✗ Instabil — Gerät bewegt?';
+    document.getElementById('dbg-jitter-txt').textContent = `AZ ±${jAz.toFixed(1)}°  EL ±${jEl.toFixed(1)}°  ${qual}`;
+  }
+
+  // Kalibrierungshinweis
+  const az = S.az, el = S.el;
+  let test = '';
+  if (el < 5)        test = 'Zeige zum Horizont → EL sollte ~0° sein';
+  else if (el > 80)  test = 'Zeige senkrecht nach oben → EL sollte ~90° sein';
+  else if (az < 15 || az > 345) test = '→ Gerät zeigt Nord. AZ sollte ~0° sein ✓';
+  else if (az > 80 && az < 100) test = '→ Gerät zeigt Ost. AZ sollte ~90° sein ✓';
+  else if (az > 170 && az < 190) test = '→ Gerät zeigt Süd. AZ sollte ~180° sein ✓';
+  else if (az > 260 && az < 280) test = '→ Gerät zeigt West. AZ sollte ~270° sein ✓';
+  else test = 'Drehe Dich nach N/O/S/W und prüfe AZ · Neige zum Himmel und prüfe EL';
+  document.getElementById('dbg-test').textContent = test;
+}
+
+function updateFromQuat(q) {
+  dbgRaw.qw=q[0]; dbgRaw.qx=q[1]; dbgRaw.qy=q[2]; dbgRaw.qz=q[3];
+  const world = quatRotate(q, CAM_AXIS);
+  const [wx, wy, wz] = world;
+
+  // Elevation: Winkel über Horizont
+  // wz ist die vertikale Komponente (nach oben = positiv)
+  const el = Math.asin(Math.max(-1, Math.min(1, wz))) * 180 / Math.PI;
+
+  // Azimut: Himmelsrichtung der horizontalen Projektion
+  // wx = Ost, wy = Nord (im geografischen KS nach Magnetkompass)
+  const az = ((Math.atan2(wx, wy) * 180 / Math.PI) + 360) % 360;
+
+  S.az = az;
+  S.el = Math.max(0, Math.min(90, el));
+  S.sensorActive = true;
+  document.getElementById('s-dot').classList.remove('off');
+  updateHUD();
+  updateDebug();
+  if (S.recording) { addPt(); drawPath(); }
+}
+
+// Euler → Quaternion (für DeviceOrientationEvent Fallback)
+// DeviceOrientationEvent gibt alpha(Z), beta(X), gamma(Y) in Grad
+// Reihenfolge der Rotationen: Z → X → Y (extrinsisch)
+function eulerToQuat(alpha, beta, gamma) {
+  const a = alpha * Math.PI / 180 / 2;
+  const b = beta  * Math.PI / 180 / 2;
+  const g = gamma * Math.PI / 180 / 2;
+  const ca=Math.cos(a), sa=Math.sin(a);
+  const cb=Math.cos(b), sb=Math.sin(b);
+  const cg=Math.cos(g), sg=Math.sin(g);
+  // Quaternion-Multiplikation: Rz(alpha) * Rx(beta) * Ry(gamma)
+  return [
+    ca*cb*cg + sa*sb*sg,
+    ca*sb*cg - sa*cb*sg,
+    ca*cb*sg + sa*sb*cg,
+    sa*cb*cg - ca*sb*sg
+  ];
+}
+
 function initSensors() {
+  // Versuch 1: AbsoluteOrientationSensor (Android Chrome, kein Gimbal Lock)
+  if (typeof AbsoluteOrientationSensor !== 'undefined') {
+    try {
+      Promise.all([
+        navigator.permissions.query({name:'accelerometer'}),
+        navigator.permissions.query({name:'gyroscope'}),
+        navigator.permissions.query({name:'magnetometer'})
+      ]).then(results => {
+        if (results.every(r => r.state !== 'denied')) {
+          const sensor = new AbsoluteOrientationSensor({frequency: 30, referenceFrame: 'screen'});
+          sensor.addEventListener('reading', () => {
+            dbgMode = 'AbsOriSensor';
+            updateFromQuat(sensor.quaternion);
+          });
+          sensor.addEventListener('error', () => listenDeviceOrientation());
+          sensor.start();
+        } else {
+          listenDeviceOrientation();
+        }
+      }).catch(() => listenDeviceOrientation());
+    } catch(e) { listenDeviceOrientation(); }
+  } else {
+    listenDeviceOrientation();
+  }
+}
+
+function listenDeviceOrientation() {
+  // Fallback: DeviceOrientationEvent (iOS Safari + ältere Android)
+  // iOS braucht explizite Berechtigung
   if (typeof DeviceOrientationEvent !== 'undefined' &&
       typeof DeviceOrientationEvent.requestPermission === 'function') {
-    DeviceOrientationEvent.requestPermission().then(r => { if (r==='granted') listenOri(); });
-  } else { listenOri(); }
+    // iOS: Berechtigung über Benutzeraktion anfordern (passiert beim ersten Rec-Button-Druck)
+    S.needsIosPermission = true;
+  } else {
+    startDeviceOrientation();
+  }
 }
-function listenOri() {
-  addEventListener('deviceorientation', e => {
-    if (e.alpha === null) return;
-    S.az = (360 - (e.alpha||0) + 360) % 360;
-    S.el = Math.max(0, Math.min(90, 90 - Math.abs(e.beta||0)));
-    S.sensorActive = true;
-    document.getElementById('s-dot').classList.remove('off');
-    updateHUD();
-    if (S.recording) { addPt(); drawPath(); }
-  }, true);
+
+function startDeviceOrientation() {
+  addEventListener('deviceorientationabsolute', handleOri, true);
+  addEventListener('deviceorientation',         handleOri, true);
+}
+
+function handleOri(e) {
+  if (e.alpha === null) return;
+  dbgRaw.alpha=e.alpha||0; dbgRaw.beta=e.beta||0; dbgRaw.gamma=e.gamma||0;
+  dbgMode = e.type==='deviceorientationabsolute' ? 'DevOriAbs' : 'DevOri(rel)';
+  const q = eulerToQuat(e.alpha||0, e.beta||0, e.gamma||0);
+  updateFromQuat(q);
 }
 initSensors();
 
@@ -730,10 +981,18 @@ function drawPath() {
 const recBtn = document.getElementById('rec-btn');
 let recInterval = null;
 function startRec() {
+  // iOS: Sensor-Berechtigung beim ersten Tastendruck anfordern
+  if (S.needsIosPermission) {
+    S.needsIosPermission = false;
+    DeviceOrientationEvent.requestPermission().then(r => {
+      if (r === 'granted') startDeviceOrientation();
+    });
+    return; // Ersten Druck nur für Berechtigung nutzen, nicht aufnehmen
+  }
   S.path=[]; S.recStart=Date.now(); S.recording=true;
   recBtn.classList.add('rec');
   document.getElementById('rec-stats').classList.add('on');
-  document.getElementById('rec-hint').textContent = 'Smartphone bewegen → Pfad aufzeichnen';
+  document.getElementById('rec-hint').textContent = 'Kamera → Meteor · Taste halten · Folgen';
   if (!S.sensorActive) recInterval = setInterval(()=>{ if(S.recording){addPt();drawPath();} }, 80);
 }
 function stopRec() {
