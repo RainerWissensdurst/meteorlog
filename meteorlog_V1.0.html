@@ -1,6 +1,4 @@
-// ══════════════════════════════════════════
-// V1.1
-// ══════════════════════════════════════════
+// 22.3.26 - 21:44
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -818,16 +816,11 @@ function handleOri(e) {
   // Azimut: alpha ist die Kompassrichtung der Oberkante des Geräts
   S.az = (alpha + 360) % 360;
 
-  // Elevation: Winkel der Oberkante über dem Horizont
-  // Gerät hochkant (Portrait): beta läuft von -180 bis +180
-  // beta=0: Gerät aufrecht, Oberkante oben → EL=0° (zeigt zum Horizont)
-  // beta=-90: Gerät liegt flach, Display oben → EL=0° (Oberkante zeigt zum Horizont)
-  // beta=-180/+180: Gerät aufrecht, Oberkante unten
-  // Elevation = wie weit die Oberkante über den Horizont geneigt ist
-  // Bei hochkantem Gerät nach vorne/hinten neigen: gamma ändert sich
-  // Für Laserpointer-Haltung (hochkant, nach oben neigen):
-  // EL steigt wenn gamma von 0 Richtung -90 geht (Oberkante nach oben)
-  const el = -gamma; // gamma=-90 → EL=90° (senkrecht nach oben)
+  // Elevation: bei hochkant gehaltenem Gerät (Laserpointer-Haltung)
+  // beta=90° wenn Kamera zum Horizont zeigt (aufrechtes Gerät)
+  // beta>90° wenn Kamera nach oben zeigt
+  // EL = beta - 90
+  const el = beta - 90;
 
   S.el = Math.max(0, Math.min(90, el));
 
