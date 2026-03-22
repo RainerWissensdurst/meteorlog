@@ -743,10 +743,9 @@ function quatRotate(q, v) {
   ];
 }
 
-// Kamera-Achse im Geräte-KS: die Oberkante des hochkant gehaltenen Geräts
-// Bei hochkantem Gerät zeigt die Y-Achse des Bildschirms nach oben = zur Kamera
-// Im Sensor-KS (screen-coordinates): [0, 1, 0]
-const CAM_AXIS = [0, 1, 0];
+// Kamera-Achse: Gerät senkrecht (Laserpointer), Kamera oben.
+// Im screen-Referenzrahmen zeigt die Oberkante entlang -Y: [0, -1, 0]
+const CAM_AXIS = [0, -1, 0];
 
 // ── Debug ──
 let dbgVisible = false;
@@ -823,9 +822,8 @@ function updateFromQuat(q) {
   // wz ist die vertikale Komponente (nach oben = positiv)
   const el = Math.asin(Math.max(-1, Math.min(1, wz))) * 180 / Math.PI;
 
-  // Azimut: Himmelsrichtung der horizontalen Projektion
-  // wx = Ost, wy = Nord (im geografischen KS nach Magnetkompass)
-  const az = ((Math.atan2(wx, wy) * 180 / Math.PI) + 360) % 360;
+  // Azimut: +180° Korrektur weil Sensor-Referenz zur Bildschirmseite zeigt, nicht zur Kamera
+  const az = ((Math.atan2(wx, wy) * 180 / Math.PI) + 180 + 360) % 360;
 
   S.az = az;
   S.el = Math.max(0, Math.min(90, el));
