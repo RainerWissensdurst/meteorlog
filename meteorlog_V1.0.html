@@ -1,3 +1,6 @@
+// ══════════════════════════════════════════
+// V1.1
+// ══════════════════════════════════════════
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -722,30 +725,13 @@ navigator.geolocation && navigator.geolocation.getCurrentPosition(
 );
 
 // ══════════════════════════════════════════
-// SENSOREN — Quaternion-basiert
-// Gerät hochkant, Kamera oben zeigt zum Meteor.
-// Wir berechnen wohin die Kamera-Achse (0,1,0 im Gerätekoordinatensystem)
-// im Weltkoordinatensystem zeigt → daraus Azimut + Elevation.
 // ══════════════════════════════════════════
-
-// Quaternion q rotiert Vektor v: q * v * q_conj
-function quatRotate(q, v) {
-  const [qw,qx,qy,qz] = q;
-  const [vx,vy,vz] = v;
-  // t = 2 * cross(q.xyz, v)
-  const tx = 2*(qy*vz - qz*vy);
-  const ty = 2*(qz*vx - qx*vz);
-  const tz = 2*(qx*vy - qy*vx);
-  return [
-    vx + qw*tx + qy*tz - qz*ty,
-    vy + qw*ty + qz*tx - qx*tz,
-    vz + qw*tz + qx*ty - qy*tx
-  ];
-}
-
-// Kamera-Achse: Gerät senkrecht (Laserpointer), Kamera oben.
-// Im screen-Referenzrahmen zeigt die Oberkante entlang -Y: [0, -1, 0]
-const CAM_AXIS = [0, -1, 0];
+// SENSOREN
+// deviceorientationabsolute liefert alpha/beta/gamma direkt.
+// alpha = Kompassrichtung der Oberkante (0=N, 90=O, 180=S, 270=W)
+// beta  = Neigung vorne/hinten (-180..+180)
+// gamma = Neigung links/rechts (-90..+90)
+// ══════════════════════════════════════════
 
 // ── Debug ──
 let dbgVisible = false;
@@ -762,147 +748,94 @@ function updateDebug() {
   if (!dbgVisible) return;
   const dirs = ['N','NNO','NO','ONO','O','OSO','SO','SSO','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   const dir = dirs[Math.round(S.az/22.5)%16];
-
   let elHint = '';
-  if (S.el < 5)       elHint = 'Horizont — Gerät waagerecht?';
+  if (S.el < 5)       elHint = 'Horizont — Kamera waagerecht';
   else if (S.el < 20) elHint = 'Flach nach oben';
   else if (S.el < 50) elHint = 'Schräg nach oben';
   else if (S.el < 80) elHint = 'Steil nach oben';
-  else                elHint = 'Fast senkrecht';
-
-  document.getElementById('dbg-az').textContent     = S.az.toFixed(1) + '°';
-  document.getElementById('dbg-az-dir').textContent = dir;
-  document.getElementById('dbg-el').textContent     = S.el.toFixed(1) + '°';
-  document.getElementById('dbg-el-hint').textContent= elHint;
-  document.getElementById('dbg-mode').textContent   = dbgMode;
-
-  document.getElementById('dbg-qw').textContent    = dbgRaw.qw.toFixed(3);
-  document.getElementById('dbg-qx').textContent    = dbgRaw.qx.toFixed(3);
-  document.getElementById('dbg-qy').textContent    = dbgRaw.qy.toFixed(3);
-  document.getElementById('dbg-qz').textContent    = dbgRaw.qz.toFixed(3);
-  document.getElementById('dbg-alpha').textContent = dbgRaw.alpha.toFixed(1);
-  document.getElementById('dbg-beta').textContent  = dbgRaw.beta.toFixed(1);
-  document.getElementById('dbg-gamma').textContent = dbgRaw.gamma.toFixed(1);
-
-  // Jitter-Berechnung
+  else                elHint = 'Fast senkrecht nach oben';
+  document.getElementById('dbg-az').textContent      = S.az.toFixed(1) + '°';
+  document.getElementById('dbg-az-dir').textContent  = dir;
+  document.getElementById('dbg-el').textContent      = S.el.toFixed(1) + '°';
+  document.getElementById('dbg-el-hint').textContent = elHint;
+  document.getElementById('dbg-mode').textContent    = dbgMode;
+  document.getElementById('dbg-qw').textContent      = dbgRaw.qw.toFixed(3);
+  document.getElementById('dbg-qx').textContent      = dbgRaw.qx.toFixed(3);
+  document.getElementById('dbg-qy').textContent      = dbgRaw.qy.toFixed(3);
+  document.getElementById('dbg-qz').textContent      = dbgRaw.qz.toFixed(3);
+  document.getElementById('dbg-alpha').textContent   = dbgRaw.alpha.toFixed(1);
+  document.getElementById('dbg-beta').textContent    = dbgRaw.beta.toFixed(1);
+  document.getElementById('dbg-gamma').textContent   = dbgRaw.gamma.toFixed(1);
   dbgHistory.az.push(S.az); dbgHistory.el.push(S.el);
   if (dbgHistory.az.length > 20) { dbgHistory.az.shift(); dbgHistory.el.shift(); }
   if (dbgHistory.az.length > 2) {
     const jAz = Math.max(...dbgHistory.az) - Math.min(...dbgHistory.az);
     const jEl = Math.max(...dbgHistory.el) - Math.min(...dbgHistory.el);
-    const pAz = Math.min(100, jAz * 5);
-    const pEl = Math.min(100, jEl * 5);
-    document.getElementById('dbg-jitter-az').style.width = pAz + '%';
-    document.getElementById('dbg-jitter-el').style.width = pEl + '%';
-    document.getElementById('dbg-jitter-az').style.background = jAz < 2 ? '#4ecf8a' : jAz < 10 ? '#f0b840' : '#ff6b6b';
-    document.getElementById('dbg-jitter-el').style.background = jEl < 2 ? '#4ecf8a' : jEl < 10 ? '#f0b840' : '#ff6b6b';
-    const qual = (jAz < 2 && jEl < 2) ? '✓ Gut — stabil' : (jAz < 10 && jEl < 10) ? '~ Mäßig' : '✗ Instabil — Gerät bewegt?';
-    document.getElementById('dbg-jitter-txt').textContent = `AZ ±${jAz.toFixed(1)}°  EL ±${jEl.toFixed(1)}°  ${qual}`;
+    document.getElementById('dbg-jitter-az').style.width = Math.min(100,jAz*5)+'%';
+    document.getElementById('dbg-jitter-el').style.width = Math.min(100,jEl*5)+'%';
+    document.getElementById('dbg-jitter-az').style.background = jAz<2?'#4ecf8a':jAz<10?'#f0b840':'#ff6b6b';
+    document.getElementById('dbg-jitter-el').style.background = jEl<2?'#4ecf8a':jEl<10?'#f0b840':'#ff6b6b';
+    document.getElementById('dbg-jitter-txt').textContent = `AZ ±${jAz.toFixed(1)}°  EL ±${jEl.toFixed(1)}°  ${(jAz<2&&jEl<2)?'✓ Gut':'~ Mäßig'}`;
   }
-
-  // Kalibrierungshinweis
-  const az = S.az, el = S.el;
   let test = '';
-  if (el < 5)        test = 'Zeige zum Horizont → EL sollte ~0° sein';
-  else if (el > 80)  test = 'Zeige senkrecht nach oben → EL sollte ~90° sein';
-  else if (az < 15 || az > 345) test = '→ Gerät zeigt Nord. AZ sollte ~0° sein ✓';
-  else if (az > 80 && az < 100) test = '→ Gerät zeigt Ost. AZ sollte ~90° sein ✓';
-  else if (az > 170 && az < 190) test = '→ Gerät zeigt Süd. AZ sollte ~180° sein ✓';
-  else if (az > 260 && az < 280) test = '→ Gerät zeigt West. AZ sollte ~270° sein ✓';
-  else test = 'Drehe Dich nach N/O/S/W und prüfe AZ · Neige zum Himmel und prüfe EL';
+  if (S.az < 15 || S.az > 345) test = 'Zeigt Nord → AZ ~0° ✓';
+  else if (S.az > 80 && S.az < 100) test = 'Zeigt Ost → AZ ~90° ✓';
+  else if (S.az > 170 && S.az < 190) test = 'Zeigt Süd → AZ ~180° ✓';
+  else if (S.az > 260 && S.az < 280) test = 'Zeigt West → AZ ~270° ✓';
+  else if (S.el < 3) test = 'Neige Kamera nach oben → EL sollte steigen';
+  else if (S.el > 85) test = 'Senkrecht nach oben → EL ~90° ✓';
+  else test = `gamma=${dbgRaw.gamma.toFixed(0)}° → EL=${S.el.toFixed(0)}°`;
   document.getElementById('dbg-test').textContent = test;
 }
 
-function updateFromQuat(q) {
-  dbgRaw.qw=q[0]; dbgRaw.qx=q[1]; dbgRaw.qy=q[2]; dbgRaw.qz=q[3];
-  const world = quatRotate(q, CAM_AXIS);
-  const [wx, wy, wz] = world;
+function initSensors() {
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    S.needsIosPermission = true;
+    return;
+  }
+  startDeviceOrientation();
+}
 
-  // Elevation: Winkel über Horizont
-  // wz ist die vertikale Komponente (nach oben = positiv)
-  const el = Math.asin(Math.max(-1, Math.min(1, wz))) * 180 / Math.PI;
+function startDeviceOrientation() {
+  window.addEventListener('deviceorientationabsolute', handleOri, true);
+  setTimeout(() => {
+    if (!S.sensorActive) window.addEventListener('deviceorientation', handleOri, true);
+  }, 2000);
+}
 
-  // Azimut: +180° Korrektur weil Sensor-Referenz zur Bildschirmseite zeigt, nicht zur Kamera
-  const az = ((Math.atan2(wx, wy) * 180 / Math.PI) + 180 + 360) % 360;
+function handleOri(e) {
+  if (e.alpha === null || e.alpha === undefined) return;
 
-  S.az = az;
+  const alpha = e.alpha || 0;
+  const beta  = e.beta  || 0;
+  const gamma = e.gamma || 0;
+
+  dbgRaw.alpha = alpha; dbgRaw.beta = beta; dbgRaw.gamma = gamma;
+  dbgRaw.qw = 0; dbgRaw.qx = 0; dbgRaw.qy = 0; dbgRaw.qz = 0;
+  dbgMode = e.type === 'deviceorientationabsolute' ? 'DevOriAbs ✓' : 'DevOri(rel)';
+
+  // Azimut: alpha ist die Kompassrichtung der Oberkante des Geräts
+  S.az = (alpha + 360) % 360;
+
+  // Elevation: Winkel der Oberkante über dem Horizont
+  // Gerät hochkant (Portrait): beta läuft von -180 bis +180
+  // beta=0: Gerät aufrecht, Oberkante oben → EL=0° (zeigt zum Horizont)
+  // beta=-90: Gerät liegt flach, Display oben → EL=0° (Oberkante zeigt zum Horizont)
+  // beta=-180/+180: Gerät aufrecht, Oberkante unten
+  // Elevation = wie weit die Oberkante über den Horizont geneigt ist
+  // Bei hochkantem Gerät nach vorne/hinten neigen: gamma ändert sich
+  // Für Laserpointer-Haltung (hochkant, nach oben neigen):
+  // EL steigt wenn gamma von 0 Richtung -90 geht (Oberkante nach oben)
+  const el = -gamma; // gamma=-90 → EL=90° (senkrecht nach oben)
+
   S.el = Math.max(0, Math.min(90, el));
+
   S.sensorActive = true;
   document.getElementById('s-dot').classList.remove('off');
   updateHUD();
   updateDebug();
   if (S.recording) { addPt(); drawPath(); }
-}
-
-// Euler → Quaternion (für DeviceOrientationEvent Fallback)
-// DeviceOrientationEvent gibt alpha(Z), beta(X), gamma(Y) in Grad
-// Reihenfolge der Rotationen: Z → X → Y (extrinsisch)
-function eulerToQuat(alpha, beta, gamma) {
-  const a = alpha * Math.PI / 180 / 2;
-  const b = beta  * Math.PI / 180 / 2;
-  const g = gamma * Math.PI / 180 / 2;
-  const ca=Math.cos(a), sa=Math.sin(a);
-  const cb=Math.cos(b), sb=Math.sin(b);
-  const cg=Math.cos(g), sg=Math.sin(g);
-  // Quaternion-Multiplikation: Rz(alpha) * Rx(beta) * Ry(gamma)
-  return [
-    ca*cb*cg + sa*sb*sg,
-    ca*sb*cg - sa*cb*sg,
-    ca*cb*sg + sa*sb*cg,
-    sa*cb*cg - ca*sb*sg
-  ];
-}
-
-function initSensors() {
-  // Versuch 1: AbsoluteOrientationSensor (Android Chrome, kein Gimbal Lock)
-  if (typeof AbsoluteOrientationSensor !== 'undefined') {
-    try {
-      Promise.all([
-        navigator.permissions.query({name:'accelerometer'}),
-        navigator.permissions.query({name:'gyroscope'}),
-        navigator.permissions.query({name:'magnetometer'})
-      ]).then(results => {
-        if (results.every(r => r.state !== 'denied')) {
-          const sensor = new AbsoluteOrientationSensor({frequency: 30, referenceFrame: 'screen'});
-          sensor.addEventListener('reading', () => {
-            dbgMode = 'AbsOriSensor';
-            updateFromQuat(sensor.quaternion);
-          });
-          sensor.addEventListener('error', () => listenDeviceOrientation());
-          sensor.start();
-        } else {
-          listenDeviceOrientation();
-        }
-      }).catch(() => listenDeviceOrientation());
-    } catch(e) { listenDeviceOrientation(); }
-  } else {
-    listenDeviceOrientation();
-  }
-}
-
-function listenDeviceOrientation() {
-  // Fallback: DeviceOrientationEvent (iOS Safari + ältere Android)
-  // iOS braucht explizite Berechtigung
-  if (typeof DeviceOrientationEvent !== 'undefined' &&
-      typeof DeviceOrientationEvent.requestPermission === 'function') {
-    // iOS: Berechtigung über Benutzeraktion anfordern (passiert beim ersten Rec-Button-Druck)
-    S.needsIosPermission = true;
-  } else {
-    startDeviceOrientation();
-  }
-}
-
-function startDeviceOrientation() {
-  addEventListener('deviceorientationabsolute', handleOri, true);
-  addEventListener('deviceorientation',         handleOri, true);
-}
-
-function handleOri(e) {
-  if (e.alpha === null) return;
-  dbgRaw.alpha=e.alpha||0; dbgRaw.beta=e.beta||0; dbgRaw.gamma=e.gamma||0;
-  dbgMode = e.type==='deviceorientationabsolute' ? 'DevOriAbs' : 'DevOri(rel)';
-  const q = eulerToQuat(e.alpha||0, e.beta||0, e.gamma||0);
-  updateFromQuat(q);
 }
 initSensors();
 
