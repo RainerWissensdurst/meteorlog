@@ -1,4 +1,3 @@
-// 22.3.26 - 21:44
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -816,11 +815,11 @@ function handleOri(e) {
   // Azimut: alpha ist die Kompassrichtung der Oberkante des Geräts
   S.az = (alpha + 360) % 360;
 
-  // Elevation: bei hochkant gehaltenem Gerät (Laserpointer-Haltung)
-  // beta=90° wenn Kamera zum Horizont zeigt (aufrechtes Gerät)
-  // beta>90° wenn Kamera nach oben zeigt
-  // EL = beta - 90
-  const el = beta - 90;
+  // Elevation:
+  // beta=0°:   flach, Display oben  → Kamera nach oben  → EL=90°
+  // beta=90°:  hochkant aufrecht    → Kamera zum Horizont → EL=0°
+  // beta=180°: flach, Display unten → Kamera nach unten → EL=-90°
+  const el = 90 - beta;
 
   S.el = Math.max(0, Math.min(90, el));
 
