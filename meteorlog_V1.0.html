@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>MeteorLog</title>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+
 <style>
 :root {
   --bg:      #04060f;
@@ -19,8 +19,8 @@
   --text:    #c8d8f8;
   --text2:   #8aaad8;
   --text3:   #5570a0;
-  --mono:    'Space Mono', monospace;
-  --sans:    'Inter', sans-serif;
+  --mono:    'Courier New', Courier, monospace;
+  --sans:    -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); overflow: hidden; }
@@ -812,14 +812,14 @@ function handleOri(e) {
   dbgRaw.qw = 0; dbgRaw.qx = 0; dbgRaw.qy = 0; dbgRaw.qz = 0;
   dbgMode = e.type === 'deviceorientationabsolute' ? 'DevOriAbs ✓' : 'DevOri(rel)';
 
-  // Azimut: alpha ist die Kompassrichtung der Oberkante des Geräts
-  S.az = (alpha + 360) % 360;
+  // Azimut: alpha zeigt 90° versetzt → korrigieren
+  S.az = (alpha + 90 + 360) % 360;
 
   // Elevation:
-  // beta=0°:   flach, Display oben  → Kamera nach oben  → EL=90°
-  // beta=90°:  hochkant aufrecht    → Kamera zum Horizont → EL=0°
-  // beta=180°: flach, Display unten → Kamera nach unten → EL=-90°
-  const el = 90 - beta;
+  // beta=0°:   flach, Kamera zeigt nach unten  → EL=-90°
+  // beta=90°:  senkrecht stehend, Kamera zum Horizont → EL=0°
+  // beta=180°: flach umgekehrt, Kamera nach oben → EL=90°
+  const el = beta - 90;
 
   S.el = Math.max(0, Math.min(90, el));
 
