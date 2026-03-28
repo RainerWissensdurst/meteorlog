@@ -1,4 +1,4 @@
-/* mit Quaternion*/
+/* 28.03.26 - 23:26 */
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -744,8 +744,9 @@ function quatRotate(q, v) {
   ];
 }
 
-// Kamera zeigt entlang -Y im Geräte-KS
-const CAM_AXIS = [0, -1, 0];
+// Kamera zeigt entlang +Y im Geräte-KS
+// (bestätigt durch Messung: flach/Nord → q≈[1,0,0,0], Kamera=Nord=+Y)
+const CAM_AXIS = [0, 1, 0];
 
 // ── Debug ──
 let dbgVisible = false;
