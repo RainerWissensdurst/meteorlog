@@ -1,3 +1,4 @@
+/* mit Quaternion*/
 <!DOCTYPE html>
 <html lang="de">
 <head>
@@ -723,12 +724,28 @@ navigator.geolocation && navigator.geolocation.getCurrentPosition(
 
 // ══════════════════════════════════════════
 // ══════════════════════════════════════════
-// SENSOREN
-// deviceorientationabsolute liefert alpha/beta/gamma direkt.
-// alpha = Kompassrichtung der Oberkante (0=N, 90=O, 180=S, 270=W)
-// beta  = Neigung vorne/hinten (-180..+180)
-// gamma = Neigung links/rechts (-90..+90)
+// SENSOREN — Quaternion (kein Gimbal Lock)
+// AbsoluteOrientationSensor mit referenceFrame:'device'
+// Kamera-Achse: [0, -1, 0] im Geräte-KS
+// (Display oben, Kamera an Oberkante, nach hinten kippen = EL steigt)
 // ══════════════════════════════════════════
+
+// Quaternion rotiert Vektor v
+function quatRotate(q, v) {
+  const [qw,qx,qy,qz] = q;
+  const [vx,vy,vz] = v;
+  const tx = 2*(qy*vz - qz*vy);
+  const ty = 2*(qz*vx - qx*vz);
+  const tz = 2*(qx*vy - qy*vx);
+  return [
+    vx + qw*tx + qy*tz - qz*ty,
+    vy + qw*ty + qz*tx - qx*tz,
+    vz + qw*tz + qx*ty - qy*tx
+  ];
+}
+
+// Kamera zeigt entlang -Y im Geräte-KS
+const CAM_AXIS = [0, -1, 0];
 
 // ── Debug ──
 let dbgVisible = false;
@@ -745,12 +762,7 @@ function updateDebug() {
   if (!dbgVisible) return;
   const dirs = ['N','NNO','NO','ONO','O','OSO','SO','SSO','S','SSW','SW','WSW','W','WNW','NW','NNW'];
   const dir = dirs[Math.round(S.az/22.5)%16];
-  let elHint = '';
-  if (S.el < 5)       elHint = 'Horizont — Kamera waagerecht';
-  else if (S.el < 20) elHint = 'Flach nach oben';
-  else if (S.el < 50) elHint = 'Schräg nach oben';
-  else if (S.el < 80) elHint = 'Steil nach oben';
-  else                elHint = 'Fast senkrecht nach oben';
+  let elHint = S.el < 5 ? 'Kamera zum Horizont' : S.el < 20 ? 'Flach nach oben' : S.el < 50 ? 'Schräg nach oben' : S.el < 80 ? 'Steil nach oben' : 'Fast senkrecht';
   document.getElementById('dbg-az').textContent      = S.az.toFixed(1) + '°';
   document.getElementById('dbg-az-dir').textContent  = dir;
   document.getElementById('dbg-el').textContent      = S.el.toFixed(1) + '°';
@@ -779,9 +791,9 @@ function updateDebug() {
   else if (S.az > 80 && S.az < 100) test = 'Zeigt Ost → AZ ~90° ✓';
   else if (S.az > 170 && S.az < 190) test = 'Zeigt Süd → AZ ~180° ✓';
   else if (S.az > 260 && S.az < 280) test = 'Zeigt West → AZ ~270° ✓';
-  else if (S.el < 3) test = 'Neige Kamera nach oben → EL sollte steigen';
-  else if (S.el > 85) test = 'Senkrecht nach oben → EL ~90° ✓';
-  else test = `gamma=${dbgRaw.gamma.toFixed(0)}° → EL=${S.el.toFixed(0)}°`;
+  else if (S.el < 3) test = 'Kamera nach oben kippen → EL sollte steigen';
+  else if (S.el > 85) test = 'Kamera zeigt senkrecht nach oben → EL ~90° ✓';
+  else test = `AZ=${S.az.toFixed(0)}° EL=${S.el.toFixed(0)}° · qW=${dbgRaw.qw.toFixed(2)}`;
   document.getElementById('dbg-test').textContent = test;
 }
 
@@ -791,9 +803,43 @@ function initSensors() {
     S.needsIosPermission = true;
     return;
   }
-  startDeviceOrientation();
+  startSensors();
 }
 
+function startSensors() {
+  // Primär: AbsoluteOrientationSensor (Quaternion, kein Gimbal Lock)
+  if (typeof AbsoluteOrientationSensor !== 'undefined') {
+    try {
+      Promise.all([
+        navigator.permissions.query({name:'accelerometer'}),
+        navigator.permissions.query({name:'gyroscope'}),
+        navigator.permissions.query({name:'magnetometer'})
+      ]).then(results => {
+        if (results.every(r => r.state !== 'denied')) {
+          const sensor = new AbsoluteOrientationSensor({
+            frequency: 30,
+            referenceFrame: 'device'
+          });
+          sensor.addEventListener('reading', () => {
+            dbgMode = 'AbsOriSensor(device)';
+            updateFromQuat(sensor.quaternion);
+          });
+          sensor.addEventListener('error', e => {
+            console.warn('AbsOriSensor error:', e);
+            startDeviceOrientation();
+          });
+          sensor.start();
+        } else {
+          startDeviceOrientation();
+        }
+      }).catch(() => startDeviceOrientation());
+    } catch(e) { startDeviceOrientation(); }
+  } else {
+    startDeviceOrientation();
+  }
+}
+
+// Fallback: DeviceOrientationEvent
 function startDeviceOrientation() {
   window.addEventListener('deviceorientationabsolute', handleOri, true);
   setTimeout(() => {
@@ -803,30 +849,40 @@ function startDeviceOrientation() {
 
 function handleOri(e) {
   if (e.alpha === null || e.alpha === undefined) return;
-
   const alpha = e.alpha || 0;
   const beta  = e.beta  || 0;
   const gamma = e.gamma || 0;
-
   dbgRaw.alpha = alpha; dbgRaw.beta = beta; dbgRaw.gamma = gamma;
-  dbgRaw.qw = 0; dbgRaw.qx = 0; dbgRaw.qy = 0; dbgRaw.qz = 0;
-  dbgMode = e.type === 'deviceorientationabsolute' ? 'DevOriAbs ✓' : 'DevOri(rel)';
-
-  // Azimut: alpha zeigt 90° versetzt → korrigieren
+  dbgMode = e.type === 'deviceorientationabsolute' ? 'DevOriAbs(fallback)' : 'DevOri(rel)';
+  // Fallback-Formel (Gimbal Lock möglich bei hoher EL)
   S.az = (alpha + 90 + 360) % 360;
-
-  // Elevation:
-  // beta=0°:   flach, Kamera zeigt nach unten  → EL=-90°
-  // beta=90°:  senkrecht stehend, Kamera zum Horizont → EL=0°
-  // beta=180°: flach umgekehrt, Kamera nach oben → EL=90°
-  const el = beta - 90;
-
-  S.el = Math.max(0, Math.min(90, el));
-
+  S.el = Math.max(0, Math.min(90, beta - 90));
   S.sensorActive = true;
   document.getElementById('s-dot').classList.remove('off');
-  updateHUD();
-  updateDebug();
+  dbgRaw.qw=0; dbgRaw.qx=0; dbgRaw.qy=0; dbgRaw.qz=0;
+  updateHUD(); updateDebug();
+  if (S.recording) { addPt(); drawPath(); }
+}
+
+function updateFromQuat(q) {
+  dbgRaw.qw=q[0]; dbgRaw.qx=q[1]; dbgRaw.qy=q[2]; dbgRaw.qz=q[3];
+
+  // Kamera-Vektor im Weltkoordinatensystem
+  const [wx, wy, wz] = quatRotate(q, CAM_AXIS);
+
+  // EL = Winkel über Horizont
+  const el = Math.asin(Math.max(-1, Math.min(1, wz))) * 180 / Math.PI;
+
+  // AZ = Kompassrichtung (Nord=0, Ost=90, Süd=180, West=270)
+  // Im ENU-Weltkoordinatensystem: wx=Ost, wy=Nord
+  const az = ((Math.atan2(wx, wy) * 180 / Math.PI) + 360) % 360;
+
+  S.az = az;
+  S.el = Math.max(0, Math.min(90, el));
+  S.sensorActive = true;
+  document.getElementById('s-dot').classList.remove('off');
+  dbgRaw.alpha=0; dbgRaw.beta=0; dbgRaw.gamma=0;
+  updateHUD(); updateDebug();
   if (S.recording) { addPt(); drawPath(); }
 }
 initSensors();
