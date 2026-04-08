@@ -874,7 +874,8 @@ function updateFromQuat(q) {
   // AZ = Kompassrichtung (Nord=0, Ost=90, Süd=180, West=270)
   // Im ENU-Weltkoordinatensystem: wx=Ost, wy=Nord
 //  const az = ((Math.atan2(wx, wy) * 180 / Math.PI) + 360) % 360;
-  const az = ((Math.atan2(wx, wy) * 180 / Math.PI) + 180 + 360) % 360;
+  //const az = ((Math.atan2(wx, wy) * 180 / Math.PI) + 180 + 360) % 360;
+  const az = (180 - (Math.atan2(wx, wy) * 180 / Math.PI) + 360) % 360;
   S.az = az;
   S.el = Math.max(0, Math.min(90, el));
   S.sensorActive = true;
