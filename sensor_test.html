@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Sensor Test</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0a0a0a; color: #eee; font-family: 'Courier New', monospace; padding: 16px; }
+h2 { color: #4f8eff; margin: 20px 0 8px; font-size: 14px; letter-spacing: .1em; }
+.row { display: flex; gap: 8px; margin-bottom: 8px; }
+.box { flex: 1; background: #111; border: 1px solid #333; border-radius: 8px; padding: 10px; text-align: center; }
+.lbl { font-size: 9px; color: #666; margin-bottom: 4px; }
+.val { font-size: 20px; color: #7eb3ff; }
+.val.green { color: #4ecf8a; }
+.val.gold  { color: #f0b840; }
+.info { background: #111; border: 1px solid #333; border-radius: 8px; padding: 12px; margin-bottom: 8px; font-size: 12px; line-height: 1.8; color: #aaa; }
+.info b { color: #eee; }
+#mode { display: inline-block; padding: 3px 10px; border-radius: 10px; background: #1a2a1a; color: #4ecf8a; font-size: 11px; }
+#mode.warn { background: #2a1a1a; color: #ff6b6b; }
+button { width: 100%; padding: 14px; background: #4f8eff; border: none; border-radius: 10px; color: white; font-size: 16px; font-family: monospace; cursor: pointer; margin-top: 12px; }
+</style>
+</head>
+<body>
+
+<div style="display:flex;justify-content:space-between;align-items:center;">
+  <div style="color:#4f8eff;font-size:16px;letter-spacing:.1em;">SENSOR TEST</div>
+  <span id="mode" class="warn">kein Sensor</span>
+</div>
+
+<h2>BERECHNETE WERTE</h2>
+<div class="row">
+  <div class="box"><div class="lbl">AZIMUT</div><div class="val" id="az">—</div></div>
+  <div class="box"><div class="lbl">ELEVATION</div><div class="val green" id="el">—</div></div>
+</div>
+
+<h2>ROHDATEN — deviceorientationabsolute</h2>
+<div class="row">
+  <div class="box"><div class="lbl">alpha</div><div class="val" id="r-alpha">—</div></div>
+  <div class="box"><div class="lbl">beta</div><div class="val" id="r-beta">—</div></div>
+  <div class="box"><div class="lbl">gamma</div><div class="val" id="r-gamma">—</div></div>
+</div>
+
+<h2>ROHDATEN — AbsoluteOrientationSensor</h2>
+<div class="row">
+  <div class="box"><div class="lbl">qW</div><div class="val gold" id="r-qw">—</div></div>
+  <div class="box"><div class="lbl">qX</div><div class="val gold" id="r-qx">—</div></div>
+  <div class="box"><div class="lbl">qY</div><div class="val gold" id="r-qy">—</div></div>
+  <div class="box"><div class="lbl">qZ</div><div class="val gold" id="r-qz">—</div></div>
+</div>
+
+<h2>ROTIERTER VEKTOR (wx, wy, wz)</h2>
+<div class="row">
+  <div class="box"><div class="lbl">wx (Ost?)</div><div class="val" id="r-wx">—</div></div>
+  <div class="box"><div class="lbl">wy (Nord?)</div><div class="val" id="r-wy">—</div></div>
+  <div class="box"><div class="lbl">wz (oben?)</div><div class="val" id="r-wz">—</div></div>
+</div>
+
+<div class="info" id="anleitung">
+  <b>Anleitung:</b><br>
+  1. Halte das Gerät flach auf dem Tisch, Oberkante nach Nord<br>
+  2. Notiere wx, wy, wz<br>
+  3. Kippe die Oberkante 45° nach oben<br>
+  4. Notiere wx, wy, wz<br><br>
+  → Welcher Wert ändert sich beim Kippen? Das ist die EL-Achse.<br>
+  → Welcher Wert ändert sich beim Drehen? Das ist die AZ-Achse.
+</div>
+
+<button onclick="startTest()">SENSOREN STARTEN</button>
+
+<script>
+function quatRotate(q, v) {
+  const [qw,qx,qy,qz] = q;
+  const [vx,vy,vz] = v;
+  const tx = 2*(qy*vz - qz*vy);
+  const ty = 2*(qz*vx - qx*vz);
+  const tz = 2*(qx*vy - qy*vx);
+  return [
+    vx + qw*tx + qy*tz - qz*ty,
+    vy + qw*ty + qz*tx - qx*tz,
+    vz + qw*tz + qx*ty - qy*tx
+  ];
+}
+
+// Aktuelle Achse — wir zeigen alle drei Kandidaten
+const AXIS = [0, 1, 0]; // änderbar
+
+function updateDisplay(quat, alpha, beta, gamma, source) {
+  document.getElementById('mode').textContent = source;
+  document.getElementById('mode').className = '';
+
+  // Rohdaten
+  if (quat) {
+    document.getElementById('r-qw').textContent = quat[0].toFixed(3);
+    document.getElementById('r-qx').textContent = quat[1].toFixed(3);
+    document.getElementById('r-qy').textContent = quat[2].toFixed(3);
+    document.getElementById('r-qz').textContent = quat[3].toFixed(3);
+
+    const [wx, wy, wz] = quatRotate(quat, AXIS);
+    document.getElementById('r-wx').textContent = wx.toFixed(3);
+    document.getElementById('r-wy').textContent = wy.toFixed(3);
+    document.getElementById('r-wz').textContent = wz.toFixed(3);
+
+    const az = ((Math.atan2(wx, wy) * 180/Math.PI) + 360) % 360;
+    const el = Math.asin(Math.max(-1, Math.min(1, wz))) * 180/Math.PI;
+    document.getElementById('az').textContent = az.toFixed(1) + '°';
+    document.getElementById('el').textContent = el.toFixed(1) + '°';
+  }
+
+  if (alpha !== null) {
+    document.getElementById('r-alpha').textContent = alpha !== null ? alpha.toFixed(1) : '—';
+    document.getElementById('r-beta').textContent  = beta  !== null ? beta.toFixed(1)  : '—';
+    document.getElementById('r-gamma').textContent = gamma !== null ? gamma.toFixed(1) : '—';
+  }
+}
+
+function startTest() {
+  // Versuch 1: AbsoluteOrientationSensor
+  if (typeof AbsoluteOrientationSensor !== 'undefined') {
+    try {
+      Promise.all([
+        navigator.permissions.query({name:'accelerometer'}),
+        navigator.permissions.query({name:'gyroscope'}),
+        navigator.permissions.query({name:'magnetometer'})
+      ]).then(results => {
+        if (results.every(r => r.state !== 'denied')) {
+          const s = new AbsoluteOrientationSensor({frequency:30, referenceFrame:'device'});
+          s.addEventListener('reading', () => {
+            updateDisplay(s.quaternion, null, null, null, 'AbsOriSensor(device)');
+          });
+          s.addEventListener('error', () => startOri());
+          s.start();
+          document.getElementById('anleitung').innerHTML = '<b>AbsoluteOrientationSensor aktiv.</b><br>Drehe und kippe das Gerät und beobachte wx/wy/wz.';
+        } else { startOri(); }
+      }).catch(startOri);
+    } catch(e) { startOri(); }
+  } else { startOri(); }
+
+  // Versuch 2: deviceorientationabsolute (läuft parallel)
+  window.addEventListener('deviceorientationabsolute', e => {
+    updateDisplay(null, e.alpha, e.beta, e.gamma, 'DevOriAbs');
+  }, true);
+}
+
+// iOS permission
+if (typeof DeviceOrientationEvent !== 'undefined' &&
+    typeof DeviceOrientationEvent.requestPermission === 'function') {
+  document.querySelector('button').textContent = 'BERECHTIGUNG + STARTEN (iOS)';
+}
+
+function startOri() {
+  window.addEventListener('deviceorientationabsolute', e => {
+    document.getElementById('mode').textContent = 'DevOriAbs only';
+  }, true);
+}
+</script>
+</body>
+</html>
