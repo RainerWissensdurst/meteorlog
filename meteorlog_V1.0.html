@@ -870,12 +870,11 @@ function updateFromQuat(q) {
   const [wx, wy, wz] = quatRotate(q, CAM_AXIS);
 
   // EL = Winkel über Horizont
-  const el = Math.asin(Math.max(-1, Math.min(1, wz))) * 180 / Math.PI;
-
+  const el = -(Math.asin(Math.max(-1, Math.min(1, wz))) * 180 / Math.PI);
   // AZ = Kompassrichtung (Nord=0, Ost=90, Süd=180, West=270)
   // Im ENU-Weltkoordinatensystem: wx=Ost, wy=Nord
-  const az = ((Math.atan2(wx, wy) * 180 / Math.PI) + 360) % 360;
-
+//  const az = ((Math.atan2(wx, wy) * 180 / Math.PI) + 360) % 360;
+  const az = ((Math.atan2(wx, wy) * 180 / Math.PI) + 180 + 360) % 360;
   S.az = az;
   S.el = Math.max(0, Math.min(90, el));
   S.sensorActive = true;
