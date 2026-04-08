@@ -866,17 +866,14 @@ function handleOri(e) {
 function updateFromQuat(q) {
   dbgRaw.qw=q[0]; dbgRaw.qx=q[1]; dbgRaw.qy=q[2]; dbgRaw.qz=q[3];
 
-  // Kamera-Vektor im Weltkoordinatensystem
   const [wx, wy, wz] = quatRotate(q, CAM_AXIS);
 
-  // EL = Winkel über Horizont
-  const el = -(Math.asin(Math.max(-1, Math.min(1, wz))) * 180 / Math.PI);
-  // AZ = Kompassrichtung (Nord=0, Ost=90, Süd=180, West=270)
-  // Im ENU-Weltkoordinatensystem: wx=Ost, wy=Nord
-//  const az = ((Math.atan2(wx, wy) * 180 / Math.PI) + 360) % 360;
-  //const az = ((Math.atan2(wx, wy) * 180 / Math.PI) + 180 + 360) % 360;
-  // const az = (180 - (Math.atan2(wx, wy) * 180 / Math.PI) + 360) % 360;
-  const az = ((Math.atan2(-wx, -wy) * 180 / Math.PI) + 360) % 360;
+  // ENU: wx=Ost, wy=Nord, wz=oben
+  // AZ: Nord=0°, Ost=90°
+  const az = ((Math.atan2(wx, wy) * 180 / Math.PI) + 360) % 360;
+  // EL: Horizont=0°, oben=90°  
+  const el = Math.asin(Math.max(-1, Math.min(1, wz))) * 180 / Math.PI;
+
   S.az = az;
   S.el = Math.max(0, Math.min(90, el));
   S.sensorActive = true;
@@ -885,6 +882,7 @@ function updateFromQuat(q) {
   updateHUD(); updateDebug();
   if (S.recording) { addPt(); drawPath(); }
 }
+
 initSensors();
 
 // ══════════════════════════════════════════
