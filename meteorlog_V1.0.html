@@ -745,7 +745,7 @@ function quatRotate(q, v) {
 
 // Kamera zeigt entlang +Y im Geräte-KS
 // (bestätigt durch Messung: flach/Nord → q≈[1,0,0,0], Kamera=Nord=+Y)
-const CAM_AXIS = [0, 0, 1];
+const CAM_AXIS = [0, 1, 0];
 // ── Debug ──
 let dbgVisible = false;
 let dbgHistory = { az:[], el:[] };
