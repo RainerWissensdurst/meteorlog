@@ -96,8 +96,9 @@ function quatRotate(q, v) {
   ];
 }
 
-// Kamera-Blickrichtung = -Z Achse des Geräts
-const CAM_AXIS = [0, 0, -1];
+// Kamera-Blickrichtung im Geräte-KS
+// Verifiziert gegen Kompass-App: [1,0,0] gibt Nord+Horizont korrekt
+const CAM_AXIS = [1, 0, 0];
 
 let lastQuat = null;
 
