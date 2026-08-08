@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Sensor Test V2.0</title>
-<style> 
+<title>Sensor Test V2.0 00:46</title>
+<style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 body { background: #0a0a0a; color: #eee; font-family: 'Courier New', monospace; padding: 12px; }
 .title { color: #4f8eff; font-size: 15px; letter-spacing: .1em; }
@@ -42,7 +42,7 @@ button { width: 100%; padding: 13px; background: #4f8eff; border: none; border-r
 </div>
 
 <!-- Methode B: Blickrichtung +Y (Längsachse) -->
-<h2>METHODE B — Längsachse (+Y)</h2>
+<h2>METHODE B — Längsachse ✓ (verifiziert)</h2>
 <div class="row">
   <div class="box"><div class="lbl">AZIMUT</div><div class="val" id="b-az">—</div></div>
   <div class="box"><div class="lbl">ELEVATION</div><div class="val g" id="b-el">—</div></div>
@@ -113,9 +113,10 @@ function compute(q) {
   document.getElementById('a-el').textContent = elA.toFixed(0)+'°';
 
   // Methode B: Blickrichtung = +Y (Längsachse zur Kamera-Oberkante)
+  // VERIFIZIERT (Kompass-Abgleich): AZ=atan2(wz,wx)-180, EL=asin(wy)
   const bB = rotAxis(R, [0,1,0]);
-  const azB = ((Math.atan2(bB[2], bB[0])*180/Math.PI)+360)%360;
-  const elB = Math.asin(Math.max(-1,Math.min(1,-bB[1])))*180/Math.PI;
+  const azB = ((Math.atan2(bB[2], bB[0])*180/Math.PI) - 180 + 720)%360;
+  const elB = Math.asin(Math.max(-1,Math.min(1, bB[1])))*180/Math.PI;
   document.getElementById('b-az').textContent = azB.toFixed(0)+'°';
   document.getElementById('b-el').textContent = elB.toFixed(0)+'°';
 
