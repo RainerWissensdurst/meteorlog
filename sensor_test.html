@@ -5,68 +5,73 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Sensor Test</title>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #0a0a0a; color: #eee; font-family: 'Courier New', monospace; padding: 16px; }
-h2 { color: #4f8eff; margin: 20px 0 8px; font-size: 14px; letter-spacing: .1em; }
-.row { display: flex; gap: 8px; margin-bottom: 8px; }
-.box { flex: 1; background: #111; border: 1px solid #333; border-radius: 8px; padding: 10px; text-align: center; }
-.lbl { font-size: 9px; color: #666; margin-bottom: 4px; }
-.val { font-size: 20px; color: #7eb3ff; }
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { background: #0a0a0a; color: #eee; font-family: 'Courier New', monospace; padding: 14px; }
+.title { color: #4f8eff; font-size: 15px; letter-spacing: .1em; }
+#mode { display: inline-block; padding: 3px 10px; border-radius: 10px; background: #2a1a1a; color: #ff6b6b; font-size: 11px; }
+#mode.ok { background: #1a2a1a; color: #4ecf8a; }
+h2 { color: #4f8eff; margin: 16px 0 6px; font-size: 12px; letter-spacing: .08em; }
+.row { display: flex; gap: 6px; margin-bottom: 6px; }
+.box { flex: 1; background: #111; border: 1px solid #333; border-radius: 8px; padding: 8px; text-align: center; }
+.lbl { font-size: 9px; color: #666; margin-bottom: 3px; }
+.val { font-size: 17px; color: #7eb3ff; }
 .val.green { color: #4ecf8a; }
 .val.gold  { color: #f0b840; }
-.info { background: #111; border: 1px solid #333; border-radius: 8px; padding: 12px; margin-bottom: 8px; font-size: 12px; line-height: 1.8; color: #aaa; }
+.info { background: #111; border: 1px solid #2a3a5a; border-radius: 8px; padding: 12px; margin: 10px 0; font-size: 12px; line-height: 1.7; color: #aaa; }
 .info b { color: #eee; }
-#mode { display: inline-block; padding: 3px 10px; border-radius: 10px; background: #1a2a1a; color: #4ecf8a; font-size: 11px; }
-#mode.warn { background: #2a1a1a; color: #ff6b6b; }
-button { width: 100%; padding: 14px; background: #4f8eff; border: none; border-radius: 10px; color: white; font-size: 16px; font-family: monospace; cursor: pointer; margin-top: 12px; }
+button { width: 100%; padding: 14px; background: #4f8eff; border: none; border-radius: 10px; color: white; font-size: 15px; font-family: monospace; cursor: pointer; margin-top: 10px; }
+.err { background: #2a1414; border-color: #5a2a2a; color: #ff9999; font-size: 11px; }
 </style>
 </head>
 <body>
 
 <div style="display:flex;justify-content:space-between;align-items:center;">
-  <div style="color:#4f8eff;font-size:16px;letter-spacing:.1em;">SENSOR TEST</div>
-  <span id="mode" class="warn">kein Sensor</span>
+  <span class="title">SENSOR TEST</span>
+  <span id="mode">nicht gestartet</span>
 </div>
 
-<h2>BERECHNETE WERTE</h2>
+<div class="info" id="status">
+  Tippe unten auf <b>STARTEN</b>. Der Browser fragt nach Berechtigungen — bitte alle erlauben.
+</div>
+
+<h2>BERECHNET (Kamera-Achse [0,0,-1])</h2>
 <div class="row">
   <div class="box"><div class="lbl">AZIMUT</div><div class="val" id="az">—</div></div>
   <div class="box"><div class="lbl">ELEVATION</div><div class="val green" id="el">—</div></div>
 </div>
 
-<h2>ROHDATEN — deviceorientationabsolute</h2>
+<h2>QUATERNION</h2>
 <div class="row">
-  <div class="box"><div class="lbl">alpha</div><div class="val" id="r-alpha">—</div></div>
-  <div class="box"><div class="lbl">beta</div><div class="val" id="r-beta">—</div></div>
-  <div class="box"><div class="lbl">gamma</div><div class="val" id="r-gamma">—</div></div>
+  <div class="box"><div class="lbl">qW</div><div class="val gold" id="qw">—</div></div>
+  <div class="box"><div class="lbl">qX</div><div class="val gold" id="qx">—</div></div>
+  <div class="box"><div class="lbl">qY</div><div class="val gold" id="qy">—</div></div>
+  <div class="box"><div class="lbl">qZ</div><div class="val gold" id="qz">—</div></div>
 </div>
 
-<h2>ROHDATEN — AbsoluteOrientationSensor</h2>
+<h2>ROTIERTER VEKTOR</h2>
 <div class="row">
-  <div class="box"><div class="lbl">qW</div><div class="val gold" id="r-qw">—</div></div>
-  <div class="box"><div class="lbl">qX</div><div class="val gold" id="r-qx">—</div></div>
-  <div class="box"><div class="lbl">qY</div><div class="val gold" id="r-qy">—</div></div>
-  <div class="box"><div class="lbl">qZ</div><div class="val gold" id="r-qz">—</div></div>
+  <div class="box"><div class="lbl">wx</div><div class="val" id="wx">—</div></div>
+  <div class="box"><div class="lbl">wy</div><div class="val" id="wy">—</div></div>
+  <div class="box"><div class="lbl">wz</div><div class="val" id="wz">—</div></div>
 </div>
 
-<h2>ROTIERTER VEKTOR (wx, wy, wz)</h2>
+<h2>EULER (Vergleich)</h2>
 <div class="row">
-  <div class="box"><div class="lbl">wx (Ost?)</div><div class="val" id="r-wx">—</div></div>
-  <div class="box"><div class="lbl">wy (Nord?)</div><div class="val" id="r-wy">—</div></div>
-  <div class="box"><div class="lbl">wz (oben?)</div><div class="val" id="r-wz">—</div></div>
+  <div class="box"><div class="lbl">alpha</div><div class="val" id="alpha">—</div></div>
+  <div class="box"><div class="lbl">beta</div><div class="val" id="beta">—</div></div>
+  <div class="box"><div class="lbl">gamma</div><div class="val" id="gamma">—</div></div>
 </div>
 
-<div class="info" id="anleitung">
-  <b>Anleitung:</b><br>
-  1. Halte das Gerät flach auf dem Tisch, Oberkante nach Nord<br>
-  2. Notiere wx, wy, wz<br>
-  3. Kippe die Oberkante 45° nach oben<br>
-  4. Notiere wx, wy, wz<br><br>
-  → Welcher Wert ändert sich beim Kippen? Das ist die EL-Achse.<br>
-  → Welcher Wert ändert sich beim Drehen? Das ist die AZ-Achse.
+<div class="info">
+  <b>Testablauf für die Kamera-Haltung:</b><br>
+  Halte das Gerät so als würdest du <b>filmen</b> — Display zu dir, Kamera-Rückseite zeigt zum Ziel.<br><br>
+  <b>1.</b> Kamera waagerecht nach Nord (Horizont) → AZ≈0°, EL≈0°<br>
+  <b>2.</b> Kamera nach Ost → AZ≈90°<br>
+  <b>3.</b> Kamera 45° nach oben → EL≈45°<br>
+  <b>4.</b> Kamera senkrecht nach oben (Himmel) → EL≈90°
 </div>
 
-<button onclick="startTest()">SENSOREN STARTEN</button>
+<button id="startBtn">STARTEN</button>
 
 <script>
 function quatRotate(q, v) {
@@ -82,77 +87,120 @@ function quatRotate(q, v) {
   ];
 }
 
-// Aktuelle Achse — wir zeigen alle drei Kandidaten
-const AXIS = [0, 1, 0]; // änderbar
+// Kamera zeigt durch die Rückseite = -Z Achse des Geräts
+const CAM_AXIS = [0, 0, -1];
 
-function updateDisplay(quat, alpha, beta, gamma, source) {
-  document.getElementById('mode').textContent = source;
-  document.getElementById('mode').className = '';
-
-  // Rohdaten
-  if (quat) {
-    document.getElementById('r-qw').textContent = quat[0].toFixed(3);
-    document.getElementById('r-qx').textContent = quat[1].toFixed(3);
-    document.getElementById('r-qy').textContent = quat[2].toFixed(3);
-    document.getElementById('r-qz').textContent = quat[3].toFixed(3);
-
-    const [wx, wy, wz] = quatRotate(quat, AXIS);
-    document.getElementById('r-wx').textContent = wx.toFixed(3);
-    document.getElementById('r-wy').textContent = wy.toFixed(3);
-    document.getElementById('r-wz').textContent = wz.toFixed(3);
-
-    const az = ((Math.atan2(wx, wy) * 180/Math.PI) + 360) % 360;
-    const el = Math.asin(Math.max(-1, Math.min(1, wz))) * 180/Math.PI;
-    document.getElementById('az').textContent = az.toFixed(1) + '°';
-    document.getElementById('el').textContent = el.toFixed(1) + '°';
-  }
-
-  if (alpha !== null) {
-    document.getElementById('r-alpha').textContent = alpha !== null ? alpha.toFixed(1) : '—';
-    document.getElementById('r-beta').textContent  = beta  !== null ? beta.toFixed(1)  : '—';
-    document.getElementById('r-gamma').textContent = gamma !== null ? gamma.toFixed(1) : '—';
-  }
+function setMode(txt, ok) {
+  const m = document.getElementById('mode');
+  m.textContent = txt;
+  m.className = ok ? 'ok' : '';
+}
+function setStatus(html, isErr) {
+  const s = document.getElementById('status');
+  s.innerHTML = html;
+  s.className = isErr ? 'info err' : 'info';
 }
 
-function startTest() {
-  // Versuch 1: AbsoluteOrientationSensor
+function showQuat(q, source) {
+  setMode(source, true);
+  document.getElementById('qw').textContent = q[0].toFixed(3);
+  document.getElementById('qx').textContent = q[1].toFixed(3);
+  document.getElementById('qy').textContent = q[2].toFixed(3);
+  document.getElementById('qz').textContent = q[3].toFixed(3);
+  const [wx, wy, wz] = quatRotate(q, CAM_AXIS);
+  document.getElementById('wx').textContent = wx.toFixed(3);
+  document.getElementById('wy').textContent = wy.toFixed(3);
+  document.getElementById('wz').textContent = wz.toFixed(3);
+  const az = ((Math.atan2(wx, wy) * 180/Math.PI) + 360) % 360;
+  const el = Math.asin(Math.max(-1, Math.min(1, wz))) * 180/Math.PI;
+  document.getElementById('az').textContent = az.toFixed(1) + '°';
+  document.getElementById('el').textContent = el.toFixed(1) + '°';
+}
+
+function showEuler(a, b, g) {
+  document.getElementById('alpha').textContent = a!==null ? a.toFixed(1) : '—';
+  document.getElementById('beta').textContent  = b!==null ? b.toFixed(1) : '—';
+  document.getElementById('gamma').textContent = g!==null ? g.toFixed(1) : '—';
+}
+
+let started = false;
+
+async function start() {
+  if (started) return;
+  started = true;
+  setStatus('Starte Sensoren…');
+
+  let gotAny = false;
+
+  // ── deviceorientationabsolute (immer versuchen, liefert Euler) ──
+  const oriHandler = e => {
+    if (e.alpha === null) return;
+    gotAny = true;
+    showEuler(e.alpha, e.beta, e.gamma);
+    if (document.getElementById('mode').textContent === 'nicht gestartet' ||
+        document.getElementById('mode').textContent === 'starte…') {
+      setMode('DevOriAbs', true);
+    }
+  };
+
+  // iOS Permission
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try {
+      const perm = await DeviceOrientationEvent.requestPermission();
+      if (perm !== 'granted') {
+        setStatus('Bewegungs-Berechtigung verweigert. Bitte in den Einstellungen erlauben.', true);
+      }
+    } catch(err) {
+      setStatus('Fehler bei Berechtigung: ' + err.message, true);
+    }
+  }
+
+  window.addEventListener('deviceorientationabsolute', oriHandler, true);
+  window.addEventListener('deviceorientation', oriHandler, true);
+
+  // ── AbsoluteOrientationSensor (Quaternion) ──
   if (typeof AbsoluteOrientationSensor !== 'undefined') {
     try {
-      Promise.all([
+      const perms = await Promise.all([
         navigator.permissions.query({name:'accelerometer'}),
         navigator.permissions.query({name:'gyroscope'}),
         navigator.permissions.query({name:'magnetometer'})
-      ]).then(results => {
-        if (results.every(r => r.state !== 'denied')) {
-          const s = new AbsoluteOrientationSensor({frequency:30, referenceFrame:'device'});
-          s.addEventListener('reading', () => {
-            updateDisplay(s.quaternion, null, null, null, 'AbsOriSensor(device)');
-          });
-          s.addEventListener('error', () => startOri());
-          s.start();
-          document.getElementById('anleitung').innerHTML = '<b>AbsoluteOrientationSensor aktiv.</b><br>Drehe und kippe das Gerät und beobachte wx/wy/wz.';
-        } else { startOri(); }
-      }).catch(startOri);
-    } catch(e) { startOri(); }
-  } else { startOri(); }
+      ]);
+      if (perms.every(p => p.state !== 'denied')) {
+        const sensor = new AbsoluteOrientationSensor({frequency:30, referenceFrame:'device'});
+        sensor.addEventListener('reading', () => {
+          gotAny = true;
+          showQuat(sensor.quaternion, 'AbsOriSensor');
+        });
+        sensor.addEventListener('error', ev => {
+          setStatus('AbsOriSensor Fehler: ' + (ev.error ? ev.error.message : 'unbekannt') + '. Nutze Euler-Daten.', true);
+        });
+        sensor.start();
+      } else {
+        setStatus('Sensor-Berechtigung verweigert. Nutze nur Euler-Daten.', true);
+      }
+    } catch(err) {
+      setStatus('AbsOriSensor nicht verfügbar: ' + err.message + '. Nutze Euler-Daten.', true);
+    }
+  } else {
+    setStatus('AbsoluteOrientationSensor nicht vorhanden. Nutze nur Euler-Daten (alpha/beta/gamma).', true);
+  }
 
-  // Versuch 2: deviceorientationabsolute (läuft parallel)
-  window.addEventListener('deviceorientationabsolute', e => {
-    updateDisplay(null, e.alpha, e.beta, e.gamma, 'DevOriAbs');
-  }, true);
+  // Nach 3s prüfen ob überhaupt was kam
+  setTimeout(() => {
+    if (!gotAny) {
+      setStatus('<b>Keine Sensordaten empfangen.</b><br>Mögliche Gründe:<br>• Browser blockiert Sensoren (Brave?)<br>• Seite nicht über HTTPS geladen<br>• Desktop ohne Sensoren<br><br>Versuche Chrome oder Ecosia auf dem Handy.', true);
+      setMode('keine Daten', false);
+    } else {
+      setStatus('<b>Sensoren laufen.</b> Bewege das Gerät und beobachte die Werte oben.');
+    }
+  }, 3000);
 }
 
-// iOS permission
-if (typeof DeviceOrientationEvent !== 'undefined' &&
-    typeof DeviceOrientationEvent.requestPermission === 'function') {
-  document.querySelector('button').textContent = 'BERECHTIGUNG + STARTEN (iOS)';
-}
-
-function startOri() {
-  window.addEventListener('deviceorientationabsolute', e => {
-    document.getElementById('mode').textContent = 'DevOriAbs only';
-  }, true);
-}
+document.getElementById('startBtn').addEventListener('click', start);
+setMode('starte…', false);
+setMode('nicht gestartet', false);
 </script>
 </body>
 </html>
