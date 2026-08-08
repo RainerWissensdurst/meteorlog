@@ -18,7 +18,7 @@
   --green:   #4ecf8a;
   --text:    #c8d8f8;
   --text2:   #8aaad8;
-  --text3:   #aaaaaa; /* #5570a0 */
+  --text3:   #5570a0;
   --mono:    'Courier New', Courier, monospace;
   --sans:    -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
@@ -745,7 +745,8 @@ function quatRotate(q, v) {
 
 // Kamera zeigt entlang +Y im Geräte-KS
 // (bestätigt durch Messung: flach/Nord → q≈[1,0,0,0], Kamera=Nord=+Y)
-const CAM_AXIS = [0, 1, 0];
+const CAM_AXIS = [0, -1, 0];
+
 // ── Debug ──
 let dbgVisible = false;
 let dbgHistory = { az:[], el:[] };
@@ -866,13 +867,15 @@ function handleOri(e) {
 function updateFromQuat(q) {
   dbgRaw.qw=q[0]; dbgRaw.qx=q[1]; dbgRaw.qy=q[2]; dbgRaw.qz=q[3];
 
+  // Kamera-Vektor im Weltkoordinatensystem
   const [wx, wy, wz] = quatRotate(q, CAM_AXIS);
 
-  // ENU: wx=Ost, wy=Nord, wz=oben
-  // AZ: Nord=0°, Ost=90°
-  const az = ((Math.atan2(wx, wy) * 180 / Math.PI) + 360) % 360;
-  // EL: Horizont=0°, oben=90°  
-  const el = Math.asin(Math.max(-1, Math.min(1, wz))) * 180 / Math.PI;
+  // Verifiziert (Pixel 7 Pro, AbsoluteOrientationSensor referenceFrame:'device'):
+  // Welt-KS: Ost=+Z, Nord=+X, Oben=-Y
+  // AZ = atan2(Ost, Nord) = atan2(wz, wx) → Nord=0°, Ost=90°
+  // EL = asin(Oben) = asin(-wy) → Horizont=0°, Zenit=90°
+  const az = ((Math.atan2(wz, wx) * 180 / Math.PI) + 360) % 360;
+  const el = Math.asin(Math.max(-1, Math.min(1, -wy))) * 180 / Math.PI;
 
   S.az = az;
   S.el = Math.max(0, Math.min(90, el));
@@ -882,7 +885,6 @@ function updateFromQuat(q) {
   updateHUD(); updateDebug();
   if (S.recording) { addPt(); drawPath(); }
 }
-
 initSensors();
 
 // ══════════════════════════════════════════
