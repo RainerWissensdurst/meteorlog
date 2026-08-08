@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Sensor Test V2.0</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+body { background: #0a0a0a; color: #eee; font-family: 'Courier New', monospace; padding: 12px; }
+.title { color: #4f8eff; font-size: 15px; letter-spacing: .1em; }
+#mode { padding: 3px 10px; border-radius: 10px; background: #2a1a1a; color: #ff6b6b; font-size: 10px; }
+#mode.ok { background: #1a2a1a; color: #4ecf8a; }
+h2 { color: #4f8eff; margin: 14px 0 5px; font-size: 11px; letter-spacing: .08em; }
+.hint { font-size: 10px; color: #888; margin-bottom: 6px; }
+.row { display: flex; gap: 6px; margin-bottom: 6px; }
+.box { flex: 1; background: #111; border: 1px solid #333; border-radius: 8px; padding: 8px; text-align: center; }
+.box.hl { border-color: #4ecf8a; background: #0f1a12; }
+.lbl { font-size: 9px; color: #777; margin-bottom: 3px; }
+.val { font-size: 16px; color: #7eb3ff; }
+.val.big { font-size: 22px; }
+.val.g { color: #4ecf8a; }
+.val.gold { color: #f0b840; }
+button { width: 100%; padding: 13px; background: #4f8eff; border: none; border-radius: 10px;
+  color: white; font-size: 15px; font-family: monospace; cursor: pointer; margin-top: 10px; }
+.err { background: #2a1414; border: 1px solid #5a2a2a; border-radius: 8px; padding: 10px; font-size: 11px; color: #ff9999; margin: 8px 0; }
+</style>
+</head>
+<body>
+
+<div style="display:flex;justify-content:space-between;align-items:center;">
+  <span class="title">SENSOR TEST V2.0</span>
+  <span id="mode">nicht gestartet</span>
+</div>
+
+<div class="hint" style="margin-top:6px;">Vergleicht mehrere Berechnungsmethoden gleichzeitig. Halte das Gerät hochkant, Kamera-Rückseite zum Ziel.</div>
+
+<!-- Methode A: Blickrichtung -Z (Bildschirm-Normale) -->
+<h2>METHODE A — Bildschirm-Normale (−Z)</h2>
+<div class="row">
+  <div class="box hl"><div class="lbl">AZIMUT</div><div class="val big" id="a-az">—</div></div>
+  <div class="box hl"><div class="lbl">ELEVATION</div><div class="val big g" id="a-el">—</div></div>
+</div>
+
+<!-- Methode B: Blickrichtung +Y (Längsachse) -->
+<h2>METHODE B — Längsachse (+Y)</h2>
+<div class="row">
+  <div class="box"><div class="lbl">AZIMUT</div><div class="val" id="b-az">—</div></div>
+  <div class="box"><div class="lbl">ELEVATION</div><div class="val g" id="b-el">—</div></div>
+</div>
+
+<!-- Methode C: getOrientation Standard -->
+<h2>METHODE C — Android getOrientation()</h2>
+<div class="row">
+  <div class="box"><div class="lbl">AZIMUT</div><div class="val" id="c-az">—</div></div>
+  <div class="box"><div class="lbl">PITCH</div><div class="val" id="c-pitch">—</div></div>
+  <div class="box"><div class="lbl">ROLL</div><div class="val" id="c-roll">—</div></div>
+</div>
+
+<h2>QUATERNION (roh)</h2>
+<div class="row">
+  <div class="box"><div class="lbl">qW</div><div class="val gold" id="qw">—</div></div>
+  <div class="box"><div class="lbl">qX</div><div class="val gold" id="qx">—</div></div>
+  <div class="box"><div class="lbl">qY</div><div class="val gold" id="qy">—</div></div>
+  <div class="box"><div class="lbl">qZ</div><div class="val gold" id="qz">—</div></div>
+</div>
+
+<div id="errbox"></div>
+
+<button id="startBtn">STARTEN</button>
+
+<div class="hint" style="margin-top:14px;line-height:1.6;">
+<b style="color:#aaa;">Testablauf:</b><br>
+Halte hochkant, Kamera-Rückseite zum Horizont Richtung Nord → welche Methode zeigt AZ 0°, EL 0°?<br>
+Dann nach hinten kippen (Kamera 45° hoch) → welche Methode lässt EL auf 45° steigen, ohne dass AZ wegläuft?<br>
+Die Methode die BEIDES schafft, ist die richtige.
+</div>
+
+<script>
+function quatToMatrix(q) {
+  const [w,x,y,z] = q;
+  return [
+    [1-2*(y*y+z*z), 2*(x*y-w*z),   2*(x*z+w*y)],
+    [2*(x*y+w*z),   1-2*(x*x+z*z), 2*(y*z-w*x)],
+    [2*(x*z-w*y),   2*(y*z+w*x),   1-2*(x*x+y*y)]
+  ];
+}
+function rotAxis(R, axis) {
+  // R * axis (axis ist Spaltenvektor)
+  return [
+    R[0][0]*axis[0]+R[0][1]*axis[1]+R[0][2]*axis[2],
+    R[1][0]*axis[0]+R[1][1]*axis[1]+R[1][2]*axis[2],
+    R[2][0]*axis[0]+R[2][1]*axis[1]+R[2][2]*axis[2]
+  ];
+}
+
+function setMode(t, ok) { const m=document.getElementById('mode'); m.textContent=t; m.className=ok?'ok':''; }
+function setErr(html) { document.getElementById('errbox').innerHTML = html ? `<div class="err">${html}</div>` : ''; }
+
+function compute(q) {
+  document.getElementById('qw').textContent=q[0].toFixed(3);
+  document.getElementById('qx').textContent=q[1].toFixed(3);
+  document.getElementById('qy').textContent=q[2].toFixed(3);
+  document.getElementById('qz').textContent=q[3].toFixed(3);
+
+  const R = quatToMatrix(q);
+
+  // Methode A: Blickrichtung = -Z (Bildschirm-Normale, zeigt bei aufrecht nach vorne)
+  // Welt-KS (device referenceFrame, empirisch): Ost=+Z, Nord=+X, Oben=-Y
+  const bA = rotAxis(R, [0,0,-1]);
+  const azA = ((Math.atan2(bA[2], bA[0])*180/Math.PI)+360)%360;
+  const elA = Math.asin(Math.max(-1,Math.min(1,-bA[1])))*180/Math.PI;
+  document.getElementById('a-az').textContent = azA.toFixed(0)+'°';
+  document.getElementById('a-el').textContent = elA.toFixed(0)+'°';
+
+  // Methode B: Blickrichtung = +Y (Längsachse zur Kamera-Oberkante)
+  const bB = rotAxis(R, [0,1,0]);
+  const azB = ((Math.atan2(bB[2], bB[0])*180/Math.PI)+360)%360;
+  const elB = Math.asin(Math.max(-1,Math.min(1,-bB[1])))*180/Math.PI;
+  document.getElementById('b-az').textContent = azB.toFixed(0)+'°';
+  document.getElementById('b-el').textContent = elB.toFixed(0)+'°';
+
+  // Methode C: Standard Android getOrientation()
+  // azimuth=atan2(R01,R11), pitch=asin(-R21), roll=atan2(-R20,R22)
+  const azC = ((Math.atan2(R[0][1], R[1][1])*180/Math.PI)+360)%360;
+  const pitchC = Math.asin(Math.max(-1,Math.min(1,-R[2][1])))*180/Math.PI;
+  const rollC = Math.atan2(-R[2][0], R[2][2])*180/Math.PI;
+  document.getElementById('c-az').textContent = azC.toFixed(0)+'°';
+  document.getElementById('c-pitch').textContent = pitchC.toFixed(0)+'°';
+  document.getElementById('c-roll').textContent = rollC.toFixed(0)+'°';
+}
+
+async function start() {
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try { await DeviceOrientationEvent.requestPermission(); } catch(e){}
+  }
+  if (typeof AbsoluteOrientationSensor !== 'undefined') {
+    try {
+      const perms = await Promise.all([
+        navigator.permissions.query({name:'accelerometer'}),
+        navigator.permissions.query({name:'gyroscope'}),
+        navigator.permissions.query({name:'magnetometer'})
+      ]);
+      if (perms.every(p=>p.state!=='denied')) {
+        const s = new AbsoluteOrientationSensor({frequency:30, referenceFrame:'device'});
+        s.addEventListener('reading', ()=>{ setMode('AbsOriSensor',true); compute(s.quaternion); });
+        s.addEventListener('error', ev=> setErr('Sensor-Fehler: '+(ev.error?ev.error.message:'?')));
+        s.start();
+        document.getElementById('startBtn').style.display='none';
+        return;
+      }
+    } catch(e){ setErr('AbsOriSensor: '+e.message); }
+  }
+  setErr('AbsoluteOrientationSensor nicht verfügbar. Chrome oder Ecosia auf dem Handy nutzen, nicht Brave.');
+  setMode('kein Sensor', false);
+}
+document.getElementById('startBtn').addEventListener('click', start);
+</script>
+</body>
+</html>
