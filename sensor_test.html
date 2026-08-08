@@ -97,8 +97,8 @@ function quatRotate(q, v) {
 }
 
 // Kamera-Blickrichtung im Geräte-KS
-// Verifiziert gegen Kompass-App: [1,0,0] gibt Nord+Horizont korrekt
-const CAM_AXIS = [1, 0, 0];
+// Verifiziert gegen 3 Kompass-Messungen (Nord, Ost, 45°-hoch)
+const CAM_AXIS = [0, -1, 0];
 
 let lastQuat = null;
 
@@ -115,8 +115,9 @@ function showQuat(q) {
   document.getElementById('wx').textContent=wx.toFixed(3);
   document.getElementById('wy').textContent=wy.toFixed(3);
   document.getElementById('wz').textContent=wz.toFixed(3);
-  const az=((Math.atan2(wx,wy)*180/Math.PI)+360)%360;
-  const el=Math.asin(Math.max(-1,Math.min(1,wz)))*180/Math.PI;
+  // Verifiziertes Welt-KS: Ost=+Z, Nord=X, Oben=-Y
+  const az=((Math.atan2(wz, wx)*180/Math.PI)+360)%360;
+  const el=Math.asin(Math.max(-1,Math.min(1,-wy)))*180/Math.PI;
   document.getElementById('az').textContent=az.toFixed(1)+'°';
   document.getElementById('el').textContent=el.toFixed(1)+'°';
 }
