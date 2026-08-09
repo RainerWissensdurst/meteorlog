@@ -915,10 +915,16 @@ function updateRecStats() {
 // PFAD AUF HAUPTHIMMEL ZEICHNEN
 // ══════════════════════════════════════════
 function azElToXY(az, el) {
-  const hx=cv.width/2, hy=cv.height/2, r=Math.min(hx,hy)*0.85;
-  const dist=(1-el/90)*r, rad=(az-90)*Math.PI/180;
-  return {x: hx+dist*Math.cos(rad), y: hy+dist*Math.sin(rad)};
-}
+  // Natürliche Himmelsansicht: Azimut horizontal, Elevation vertikal
+  // Bildmitte = Blickrichtung; ±90° Sichtfeld auf die Bildschirmbreite
+  const hx=cv.width/2, hy=cv.height/2;
+  const spanX=Math.min(hx,hy)*0.85/45;  // Skalierung: 45° = voller Radius
+  // Azimut-Differenz zur Bildmitte, sauber über die 0°/360°-Grenze
+  let daz=az-S.azCenter;
+  if (daz>180) daz-=360; if (daz<-180) daz+=360;
+  const del=el-S.elCenter;
+  return {x: hx+daz*spanX, y: hy-del*spanX};
+}  
 function drawPath() {
   cx.clearRect(0,0,cv.width,cv.height);
   if (S.path.length < 2) return;
