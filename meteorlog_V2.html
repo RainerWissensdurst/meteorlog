@@ -955,6 +955,8 @@ function startRec() {
     return; // Ersten Druck nur für Berechtigung nutzen, nicht aufnehmen
   }
   S.path=[]; S.recStart=Date.now(); S.recording=true;
+  S.azCenter=S.az; S.elCenter=S.el;
+  
   recBtn.classList.add('rec');
   document.getElementById('rec-stats').classList.add('on');
   document.getElementById('rec-hint').textContent = 'Kamera → Meteor · Taste halten · Folgen';
