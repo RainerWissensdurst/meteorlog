@@ -891,9 +891,21 @@ function updateHUD() {
 // PFAD-AUFNAHME
 // ══════════════════════════════════════════
 function addPt() {
-  S.path.push({ az:S.az, el:S.el, t:(Date.now()-S.recStart)/1000 });
+  // Glättung: neuer Punkt gemittelt mit den letzten Werten (dämpft Zittern)
+  let az=S.az, el=S.el;
+  const n=S.path.length;
+  if (n>0) {
+    const prev=S.path[n-1];
+    // Azimut sauber über 0°/360°-Grenze mitteln
+    let d=az-prev.az;
+    if (d>180) d-=360; if (d<-180) d+=360;
+    az=prev.az + d*0.4;   // 0.4 = Glättungsstärke (kleiner = glatter)
+    if (az<0) az+=360; if (az>=360) az-=360;
+    el=prev.el + (el-prev.el)*0.4;
+  }
+  S.path.push({ az, el, t:(Date.now()-S.recStart)/1000 });
   updateRecStats();
-}
+}  
 function calcArc() {
   if (S.path.length < 2) return 0;
   const a = S.path[0], b = S.path[S.path.length-1];
