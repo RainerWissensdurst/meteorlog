@@ -891,6 +891,8 @@ function updateHUD() {
 // PFAD-AUFNAHME
 // ══════════════════════════════════════════
 function addPt() {
+ // Beruhigungszeit: erste 0.3s nach Druck verwerfen (Finger-Ruck)
+  if ((Date.now()-S.recStart)/1000 < 0.3) return;
   // Glättung: neuer Punkt gemittelt mit den letzten Werten (dämpft Zittern)
   let az=S.az, el=S.el;
   const n=S.path.length;
