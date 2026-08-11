@@ -439,7 +439,6 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
     <!-- Helligkeit -->
     <div class="sec">
       <div class="lbl">Helligkeit — wie hell war der Meteor?</div>
-      <canvas id="mag-cv" style="width:100%;height:60px;display:block;border-radius:6px;margin-bottom:12px;background:#020408;"></canvas>
       <div class="speed-row">
         <input type="range" id="mag-sl" min="0" max="5" value="3" step="1" oninput="setMag(this.value)">
       </div>
@@ -447,24 +446,24 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
       <div class="meta-txt" id="mag-hint">mittelheller Meteor · Magnitude ≈ +2</div>
     </div>
 
-    <!-- Schauer -->
+    <!-- Geschwindigkeit -->
     <div class="sec">
-      <div class="lbl">Meteorschauer (IMO-Kürzel)</div>
-      <div class="chips" style="gap:6px;" id="shower-chips">
-        <div class="chip shower-chip" data-g="shower" data-v="PER" onclick="pick(this)"><span class="chip-lbl">Perseiden (PER) Aug.</span></div>
-        <div class="chip shower-chip" data-g="shower" data-v="GEM" onclick="pick(this)"><span class="chip-lbl">Geminiden (GEM) Dez.</span></div>
-        <div class="chip shower-chip" data-g="shower" data-v="LEO" onclick="pick(this)"><span class="chip-lbl">Leoniden (LEO) Nov.</span></div>
-        <div class="chip shower-chip" data-g="shower" data-v="ETA" onclick="pick(this)"><span class="chip-lbl">η-Aquariiden (ETA) Mai</span></div>
-        <div class="chip shower-chip" data-g="shower" data-v="ORI" onclick="pick(this)"><span class="chip-lbl">Orioniden (ORI) Okt.</span></div>
-        <div class="chip shower-chip" data-g="shower" data-v="QUA" onclick="pick(this)"><span class="chip-lbl">Quadrantiden (QUA) Jan.</span></div>
-        <div class="chip shower-chip" data-g="shower" data-v="DRA" onclick="pick(this)"><span class="chip-lbl">Drakoniden (DRA) Okt.</span></div>
-        <div class="chip shower-chip" data-g="shower" data-v="SPO" onclick="pick(this)"><span class="chip-lbl">Sporadisch (SPO)</span></div>
+      <div class="lbl">Geschwindigkeit — IMO-Pflichtfeld</div>
+      <div class="speed-row">
+        <input type="range" id="speed-sl" min="1" max="40" value="15" step="1" oninput="setSpeed(this.value)">
+        <span class="speed-val" id="speed-val">15 °/s</span>
       </div>
+      <div style="display:flex;justify-content:space-between;margin-top:5px;">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">Langsam</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--accent2);font-weight:500" id="speed-cls">Mittel</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">Sehr schnell</span>
+      </div>
+      <div class="meta-txt" id="speed-hint"></div>
     </div>
 
     <!-- Farbe -->
     <div class="sec">
-      <div class="lbl">Farbe <span class="lbl-hint" id="col-hint">(Mehrfachauswahl)</span></div>
+      <div class="lbl">Farbe <span class="lbl-hint" id="col-hint">(auffälligste zuerst antippen)</span></div>
       <div id="col-locked" style="display:none;font-family:var(--mono);font-size:11px;color:var(--text3);padding-bottom:6px;">Zu schwach für Farbwahrnehmung</div>
       <div class="chips" id="col-chips">
         <div class="chip" data-g="col" data-v="white" onclick="pickCol(this)">
@@ -494,19 +493,19 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
       </div>
     </div>
 
-    <!-- Geschwindigkeit -->
+    <!-- Schauer (IMO-Kürzel) -->
     <div class="sec">
-      <div class="lbl">Geschwindigkeit — IMO-Pflichtfeld</div>
-      <div class="speed-row">
-        <input type="range" id="speed-sl" min="1" max="40" value="15" step="1" oninput="setSpeed(this.value)">
-        <span class="speed-val" id="speed-val">15 °/s</span>
+      <div class="lbl">Meteorschauer (IMO-Kürzel)</div>
+      <div class="chips" style="gap:6px;" id="shower-chips">
+        <div class="chip shower-chip" data-g="shower" data-v="PER" onclick="pick(this)"><span class="chip-lbl">Perseiden (PER) Aug.</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="GEM" onclick="pick(this)"><span class="chip-lbl">Geminiden (GEM) Dez.</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="LEO" onclick="pick(this)"><span class="chip-lbl">Leoniden (LEO) Nov.</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="ETA" onclick="pick(this)"><span class="chip-lbl">η-Aquariiden (ETA) Mai</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="ORI" onclick="pick(this)"><span class="chip-lbl">Orioniden (ORI) Okt.</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="QUA" onclick="pick(this)"><span class="chip-lbl">Quadrantiden (QUA) Jan.</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="DRA" onclick="pick(this)"><span class="chip-lbl">Drakoniden (DRA) Okt.</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="SPO" onclick="pick(this)"><span class="chip-lbl">Sporadisch (SPO)</span></div>
       </div>
-      <div style="display:flex;justify-content:space-between;margin-top:5px;">
-        <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">Langsam</span>
-        <span style="font-family:var(--mono);font-size:10px;color:var(--accent2);font-weight:500" id="speed-cls">Mittel</span>
-        <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">Sehr schnell</span>
-      </div>
-      <div class="meta-txt" id="speed-hint"></div>
     </div>
 
     <!-- Aufklappbarer Detail-Bereich -->
@@ -1068,8 +1067,10 @@ const COLOR_MAP = {
 
 function getMeteorColors() {
   const cols = S.p.col; const speed = S.p.speed;
-  if (cols && cols.length > 0 && cols[0] !== 'white') return COLOR_MAP[cols[0]] || COLOR_MAP.white;
-  // Physikalisch: langsam=rot, mittel=gelb, schnell=blau
+  // Wurde mindestens eine Farbe gewählt? Dann die auffälligste (erste) nehmen.
+  // (IMO: Farben werden in Reihenfolge der Auffälligkeit notiert)
+  if (cols && cols.length > 0) return COLOR_MAP[cols[0]] || COLOR_MAP.white;
+  // Keine Farbe gewählt → physikalische Schätzung aus Geschwindigkeit
   if (speed < 8)  return COLOR_MAP.red;
   if (speed < 20) return COLOR_MAP.yellow;
   return COLOR_MAP.blue;
@@ -1181,12 +1182,12 @@ function updatePreviewInfo() {
 // ── Helligkeit: Schieberegler mit 6 Stufen ──
 // Jede Stufe: gespeicherter Magnitude-Wert (IMO), Anker-Text, Hinweis, Punkt-Helligkeit(0..1)
 const MAG_STEPS = [
-  { v:'-4', anchor:'Feuerkugel — heller als alles, wirft Schatten', hint:'Bolide · Magnitude ≈ −4 oder heller', dot:1.0 },
-  { v:'-2', anchor:'So hell wie die Venus — der helle Planet', hint:'sehr heller Meteor · Magnitude ≈ −2', dot:0.85 },
-  { v:'-1', anchor:'So hell wie Sirius — der hellste Stern', hint:'heller Meteor · Magnitude ≈ −1', dot:0.7 },
-  { v:'2',  anchor:'So hell wie die Sterne des Großen Wagens', hint:'mittelheller Meteor · Magnitude ≈ +2', dot:0.5 },
-  { v:'3',  anchor:'So hell wie die Sterne der Cassiopeia (Himmels-W)', hint:'schwächerer Meteor · Magnitude ≈ +3', dot:0.32 },
-  { v:'5',  anchor:'Schwach — kaum zu sehen, fast übersehen', hint:'sehr schwacher Meteor · Magnitude ≈ +5', dot:0.16 },
+  { v:'-4', anchor:'Feuerkugel — heller als alles, wirft Schatten', hint:'Bolide · Magnitude ≈ −4 oder heller' },
+  { v:'-2', anchor:'So hell wie die Venus — der helle Planet', hint:'sehr heller Meteor · Magnitude ≈ −2' },
+  { v:'-1', anchor:'So hell wie Sirius — der hellste Stern', hint:'heller Meteor · Magnitude ≈ −1' },
+  { v:'2',  anchor:'So hell wie die Sterne des Großen Wagens', hint:'mittelheller Meteor · Magnitude ≈ +2' },
+  { v:'3',  anchor:'So hell wie die Sterne der Cassiopeia (Himmels-W)', hint:'schwächerer Meteor · Magnitude ≈ +3' },
+  { v:'5',  anchor:'Schwach — kaum zu sehen, fast übersehen', hint:'sehr schwacher Meteor · Magnitude ≈ +5' },
 ];
 function setMag(idx) {
   idx = parseInt(idx);
@@ -1195,28 +1196,8 @@ function setMag(idx) {
   document.getElementById('mag-anchor').textContent = step.anchor;
   document.getElementById('mag-hint').textContent = step.hint;
   document.getElementById('mag-sl').value = idx;
-  drawMagDot(step.dot);
   updateColLock();
   updatePreviewInfo();
-}
-function drawMagDot(bright) {
-  const c=document.getElementById('mag-cv'); if(!c) return;
-  c.width=c.offsetWidth||320; c.height=60;
-  const x=c.getContext('2d'), W=c.width, H=c.height;
-  x.clearRect(0,0,W,H);
-  // ein paar schwache Hintergrundsterne zur Orientierung
-  let sd=7;
-  const rnd=()=>{sd=(sd*1664525+1013904223)&0xffffffff;return (sd>>>0)/0xffffffff;};
-  for(let i=0;i<40;i++){ const px=rnd()*W, py=rnd()*H, r=rnd()*0.8+0.3;
-    x.fillStyle=`rgba(200,216,248,${0.15+rnd()*0.2})`; x.beginPath(); x.arc(px,py,r,0,Math.PI*2); x.fill(); }
-  // der Vergleichspunkt in der Mitte
-  const cx=W/2, cy=H/2, R=3+bright*9;
-  const grd=x.createRadialGradient(cx,cy,0,cx,cy,R*3);
-  grd.addColorStop(0,`rgba(255,245,220,${0.5+bright*0.5})`);
-  grd.addColorStop(0.3,`rgba(240,184,64,${0.3+bright*0.4})`);
-  grd.addColorStop(1,'rgba(240,184,64,0)');
-  x.fillStyle=grd; x.beginPath(); x.arc(cx,cy,R*3,0,Math.PI*2); x.fill();
-  x.fillStyle=`rgba(255,250,235,${0.7+bright*0.3})`; x.beginPath(); x.arc(cx,cy,R,0,Math.PI*2); x.fill();
 }
 function toggleDetails() {
   const t=document.getElementById('details-toggle');
@@ -1248,8 +1229,8 @@ function pickLm(el) {
   drawLmSky(parseFloat(el.dataset.v));
 }
 function updateColLock() {
-  // Farbe ab Magnitude +3 nicht mehr wahrnehmbar (IMO: schwächer als +2)
-  const weak = parseFloat(S.p.mag) >= 3;
+  // Farbe ab Magnitude ≥ +3 nicht mehr wahrnehmbar (IMO: schwächer als +2)
+  const weak = parseFloat(S.p.mag) > 2;
   const chips=document.getElementById('col-chips');
   const locked=document.getElementById('col-locked');
   chips.style.opacity=weak?'0.25':'1';
