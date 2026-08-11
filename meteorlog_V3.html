@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>MeteorLog V2.0 090826/11:18</title>
+<title>MeteorLog V3.1 110826 — Standort</title>
 
 <style>
 :root {
@@ -172,6 +172,8 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
   font-size: 13px; resize: none; outline: none; transition: border-color .15s; }
 #notes:focus { border-color: var(--accent); }
 #notes::placeholder { color: var(--text3); }
+#loc-name:focus { border-color: var(--accent); }
+#loc-name::placeholder { color: var(--text3); }
 
 /* Footer: Preview-Canvas + Speichern */
 #preview-canvas { width: 100%; height: 72px; display: block; background: #020408; }
@@ -223,7 +225,7 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
 <div id="hud">
   <div class="pill"><div class="dot off" id="s-dot"></div><span id="az-hud">AZ <b>—</b></span></div>
   <div class="pill"><span id="el-hud">EL <b>—</b></span></div>
-  <div class="pill"><span id="gps-hud">GPS <b>—</b></span></div>
+  <div class="pill" onclick="requestLocation(true)" style="cursor:pointer;" title="Standort aktualisieren"><span id="gps-hud">GPS <b>—</b></span></div>
   <div class="pill" onclick="toggleDebug()" style="cursor:pointer;color:var(--text3);">DBG</div>
 </div>
 
@@ -434,6 +436,19 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
         </div>
         <div class="path-meta" id="path-meta">—</div>
       </div>
+    </div>
+
+    <!-- Standort -->
+    <div class="sec">
+      <div class="lbl">Standort</div>
+      <div id="loc-info" style="font-family:var(--mono);font-size:11px;color:var(--text2);line-height:1.8;margin-bottom:8px;">—</div>
+      <button onclick="requestLocation(true)" style="padding:6px 12px;border-radius:8px;background:transparent;
+        border:1px solid var(--border);color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer;margin-bottom:10px;">
+        ↻ Standort aktualisieren
+      </button>
+      <input type="text" id="loc-name" placeholder="Ortsname (optional, z.B. Lünen)" maxlength="60"
+        style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;
+        padding:8px 10px;color:var(--text);font-family:var(--sans);font-size:13px;outline:none;">
     </div>
 
     <!-- Helligkeit -->
@@ -706,11 +721,65 @@ setInterval(tick, 1000); tick();
 // ══════════════════════════════════════════
 // GPS
 // ══════════════════════════════════════════
-navigator.geolocation && navigator.geolocation.getCurrentPosition(
-  p => { S.location = {lat:p.coords.latitude, lng:p.coords.longitude};
-         document.getElementById('gps-hud').innerHTML = `GPS <b>${p.coords.latitude.toFixed(2)}°N</b>`; },
-  ()=> document.getElementById('gps-hud').innerHTML = 'GPS <b>keine</b>'
-);
+// S.location States:
+//   null                 → noch nie versucht
+//   {lat,lng,accuracy,ts} → erfolgreich ermittelt
+//   {error:true, msg}     → Versuch fehlgeschlagen (Berechtigung/Signal/Timeout)
+
+function fmtCoord(lat, lng) {
+  const ns = lat >= 0 ? 'N' : 'S';
+  const ow = lng >= 0 ? 'O' : 'W';
+  return `${Math.abs(lat).toFixed(3)}°${ns} ${Math.abs(lng).toFixed(3)}°${ow}`;
+}
+
+function updateGpsHud() {
+  const el = document.getElementById('gps-hud');
+  if (!el) return;
+  if (!S.location)        { el.innerHTML = 'GPS <b>—</b>'; return; }
+  if (S.location.loading) { el.innerHTML = 'GPS <b>lädt…</b>'; return; }
+  if (S.location.error)   { el.innerHTML = `GPS <b style="color:var(--red)">${S.location.msg}</b>`; return; }
+  el.innerHTML = `GPS <b>${fmtCoord(S.location.lat, S.location.lng)}</b>`;
+}
+
+function updateLocationInfo() {
+  const el = document.getElementById('loc-info');
+  if (!el) return;
+  if (!S.location)        { el.textContent = 'Standort: noch nicht ermittelt'; return; }
+  if (S.location.loading) { el.textContent = 'Standort wird ermittelt…'; return; }
+  if (S.location.error)   { el.innerHTML = `Standort: <span style="color:var(--red)">${S.location.msg}</span>`; return; }
+  const acc = S.location.accuracy ? ` · Genauigkeit ±${Math.round(S.location.accuracy)}m` : '';
+  el.innerHTML = `Standort: <b>${fmtCoord(S.location.lat, S.location.lng)}</b>${acc}`;
+}
+
+function requestLocation(manual) {
+  if (!navigator.geolocation) {
+    S.location = { error:true, msg:'nicht unterstützt' };
+    updateGpsHud(); updateLocationInfo();
+    return;
+  }
+  if (manual) {
+    S.location = { loading:true };
+    updateGpsHud(); updateLocationInfo();
+  }
+  navigator.geolocation.getCurrentPosition(
+    p => {
+      S.location = {
+        lat: p.coords.latitude,
+        lng: p.coords.longitude,
+        accuracy: p.coords.accuracy,
+        ts: Date.now()
+      };
+      updateGpsHud(); updateLocationInfo();
+    },
+    err => {
+      const msgs = { 1:'Berechtigung verweigert', 2:'kein Signal', 3:'Zeitüberschreitung' };
+      S.location = { error:true, msg: msgs[err.code] || 'Fehler' };
+      updateGpsHud(); updateLocationInfo();
+    },
+    { enableHighAccuracy:true, timeout:10000, maximumAge:0 }
+  );
+}
+requestLocation(false);
 
 // ══════════════════════════════════════════
 // ══════════════════════════════════════════
@@ -983,6 +1052,7 @@ let prevAnimId = null;
 
 function openProps() {
   renderPathPreview();
+  updateLocationInfo();
   updateColLock();
   setSpeed(S.p.speed);
   document.getElementById('props-panel').classList.add('open');
@@ -1288,6 +1358,7 @@ function saveSighting() {
     id: Date.now().toString(36)+Math.random().toString(36).slice(2,5),
     timestamp: new Date().toISOString(),
     location: S.location,
+    locName: document.getElementById('loc-name').value.trim(),
     path: [...S.path],
     mag:S.p.mag, col:[...S.p.col], trail:S.p.trail, light:S.p.light,
     sound:S.p.sound, shower:S.p.shower, speed:S.p.speed, lm:S.p.lm,
@@ -1298,6 +1369,7 @@ function saveSighting() {
   showToast('Sichtung gespeichert ✓');
   document.getElementById('list-btn').classList.add('on');
   document.getElementById('notes').value='';
+  document.getElementById('loc-name').value='';
   // Selektionen zurücksetzen die einmalig sind
   S.p.shower=null; S.p.light=null;
   document.querySelectorAll('[data-g="shower"],[data-g="light"]').forEach(c=>c.classList.remove('on'));
@@ -1348,6 +1420,15 @@ function renderList() {
     const sD=s.path&&s.path.length?azToDir(s.path[0].az)+' '+s.path[0].el.toFixed(0)+'°':'?';
     const eD=s.path&&s.path.length>1?azToDir(s.path[s.path.length-1].az)+' '+s.path[s.path.length-1].el.toFixed(0)+'°':'?';
     const dur=s.path&&s.path.length>1?s.path[s.path.length-1].t.toFixed(1)+'s':'?';
+    let locStr='Standort: —';
+    if(s.location){
+      if(s.location.error) locStr=`Standort: ${s.location.msg}`;
+      else if(s.location.lat!==undefined){
+        const acc=s.location.accuracy?` (±${Math.round(s.location.accuracy)}m)`:'';
+        locStr=`Standort: ${fmtCoord(s.location.lat,s.location.lng)}${acc}`;
+      }
+    }
+    if(s.locName) locStr+=` — "${s.locName}"`;
     return `<div class="sc" id="sc-${s.id}">
       <div class="sc-top"><span class="sc-time">${dt}</span><span class="sc-mag">mag ${s.mag}</span></div>
       <div style="position:relative;overflow:hidden;background:#020408;border-radius:8px;margin-bottom:10px;cursor:pointer;"
@@ -1365,6 +1446,7 @@ function renderList() {
         Farbe: ${(s.col||[]).map(c=>colN[c]||c).join(', ')||'—'} · ${lightN[s.light]||'—'}<br>
         Trail: ${trailN[s.trail]||'—'} · Ton: ${soundN[s.sound]||'—'}<br>
         v: ${s.speed||'?'}°/s · Grenzgröße: +${s.lm||'?'}<br>
+        ${locStr}<br>
         ${s.shower?'Schauer: '+showerN[s.shower]+'<br>':''}
         ${s.notes?`<span style="color:var(--text3);">"${s.notes}"</span>`:''}
       </div>
