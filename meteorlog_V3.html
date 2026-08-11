@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>MeteorLog V3.1 110826 — Standort</title>
+<title>MeteorLog V1.0 11.08.26 18:45</title>
 
 <style>
 :root {
@@ -217,7 +217,13 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
 
 <!-- Top-Bar -->
 <div id="topbar">
-  <div class="logo">METEOR<span>LOG</span></div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="logo">METEOR<span>LOG</span></div>
+    <button onclick="showWelcomeInfo()" title="Info"
+      style="background:transparent;border:1px solid var(--border);border-radius:50%;
+             width:22px;height:22px;color:var(--text2);font-family:var(--mono);font-size:11px;
+             cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;line-height:1;">?</button>
+  </div>
   <div id="datetime"></div>
 </div>
 
@@ -363,6 +369,38 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
   </div>
 </div>
 
+<!-- Welcome / Info Overlay -->
+<div id="welcome-info" style="display:none;position:fixed;inset:0;z-index:180;
+  background:rgba(4,6,15,0.88);align-items:center;justify-content:center;padding:24px;">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;
+    padding:24px;max-width:340px;width:100%;max-height:90vh;overflow-y:auto;">
+    <div style="font-family:var(--mono);font-size:12px;color:var(--accent2);letter-spacing:.08em;margin-bottom:16px;">
+      WILLKOMMEN BEI METEORLOG
+    </div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:18px;">
+      MeteorLog hilft dir, deine Meteorsichtungen zu dokumentieren. Richte dein Handy auf den Meteor, zeichne die Bewegung mit den Sensoren auf und beschreibe kurz, was du gesehen hast.
+    </div>
+    <div style="font-size:13px;color:var(--text2);line-height:2;margin-bottom:18px;">
+      <b style="color:var(--accent2);font-family:var(--mono);margin-right:6px;">1.</b>Taste halten und dem Meteor-Weg folgen<br>
+      <b style="color:var(--accent2);font-family:var(--mono);margin-right:6px;">2.</b>Details ergänzen — Helligkeit, Farbe, Geschwindigkeit, Schauer …<br>
+      <b style="color:var(--accent2);font-family:var(--mono);margin-right:6px;">3.</b>Speichern
+    </div>
+    <div style="font-size:11px;color:var(--text3);line-height:1.7;padding:10px 12px;
+      background:rgba(79,142,255,0.06);border-radius:8px;margin-bottom:18px;font-family:var(--mono);">
+      Keine Server-Übertragung · keine Tracker · keine Cookies<br>
+      GPS für deinen Standort<br>
+      Deine Sichtungen werden nur lokal in deinem Browser gespeichert
+    </div>
+    <button onclick="dismissWelcome()" style="width:100%;padding:12px;border-radius:10px;
+      background:var(--accent);border:none;color:white;font-family:var(--mono);font-size:13px;cursor:pointer;">
+      Los geht's
+    </button>
+    <div style="text-align:center;font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:14px;letter-spacing:.05em;">
+      MeteorLog · von Tobias Heiburg
+    </div>
+  </div>
+</div>
+
 <!-- Gerätehaltung Info-Overlay -->
 <div id="holding-info" style="display:none;position:fixed;inset:0;z-index:180;
   background:rgba(4,6,15,0.88);align-items:center;justify-content:center;padding:24px;">
@@ -397,7 +435,7 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
       <div style="font-size:12px;color:var(--text2);line-height:1.8;">
         <div style="color:var(--green);font-family:var(--mono);font-size:10px;margin-bottom:8px;">✓ RICHTIG</div>
         Gerät <b style="color:var(--text);">hochkant</b> halten, Display zu dir — wie beim Fotografieren einer Person.<br><br>
-        Die <b style="color:var(--text);">Kamera-Rückseite</b> zeigt zum Meteor. Zum Horizont zielen = 0°, weiter nach hinten kippen = höher am Himmel.<br><br>
+        Ziele einfach direkt auf die Stelle am Himmel, wo du den Meteor gesehen hast — als würdest du ihn filmen.<br><br>
         <b style="color:var(--text);">Taste halten</b> und dem Meteor-Weg langsam folgen — es zählt die Richtung, nicht das Tempo.
       </div>
     </div>
@@ -1364,6 +1402,7 @@ function saveSighting() {
     sound:S.p.sound, shower:S.p.shower, speed:S.p.speed, lm:S.p.lm,
     notes: document.getElementById('notes').value
   });
+  persistSightings();
   closeProps();
   cx.clearRect(0,0,cv.width,cv.height);
   showToast('Sichtung gespeichert ✓');
@@ -1397,6 +1436,7 @@ function closeList() {
 function deleteSighting(id) {
   if(listAnims[id]){ cancelAnimationFrame(listAnims[id]); delete listAnims[id]; }
   S.sightings=S.sightings.filter(s=>s.id!==id);
+  persistSightings();
   if(!S.sightings.length) document.getElementById('list-btn').classList.remove('on');
   renderList();
 }
@@ -1593,8 +1633,58 @@ function dismissHoldingInfo() {
 }
 
 // ══════════════════════════════════════════
+// WELCOME / INFO OVERLAY
+// ══════════════════════════════════════════
+function showWelcomeInfo() {
+  document.getElementById('welcome-info').style.display = 'flex';
+}
+function dismissWelcome() {
+  document.getElementById('welcome-info').style.display = 'none';
+  try { localStorage.setItem('meteorlog_welcome_seen', '1'); } catch(e) {}
+}
+function maybeShowWelcomeOnStart() {
+  try {
+    if (!localStorage.getItem('meteorlog_welcome_seen')) {
+      showWelcomeInfo();
+    }
+  } catch(e) {
+    // Kein localStorage verfügbar (z.B. Private Mode strict) → einfach zeigen
+    showWelcomeInfo();
+  }
+}
+
+// ══════════════════════════════════════════
+// LOCALSTORAGE — SICHTUNGEN PERSISTENZ
+// ══════════════════════════════════════════
+function persistSightings() {
+  try {
+    localStorage.setItem('meteorlog_sightings', JSON.stringify(S.sightings));
+  } catch(e) {
+    console.warn('MeteorLog: Speichern in localStorage fehlgeschlagen', e);
+  }
+}
+function loadSightings() {
+  try {
+    const raw = localStorage.getItem('meteorlog_sightings');
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      S.sightings = parsed;
+      if (S.sightings.length) {
+        document.getElementById('list-btn').classList.add('on');
+      }
+    }
+  } catch(e) {
+    console.warn('MeteorLog: Laden aus localStorage fehlgeschlagen', e);
+    S.sightings = [];
+  }
+}
+
+// ══════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════
+loadSightings();
+maybeShowWelcomeOnStart();
 updateHUD();
 setSpeed(15);
 drawLmSky(5);
