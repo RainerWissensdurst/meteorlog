@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>MeteorLog</title>
+<title>MeteorLog V1.0 11.08.26 18:45</title>
 
 <style>
 :root {
@@ -118,6 +118,14 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
   background: transparent; color: var(--text2); cursor: pointer; font-size: 16px;
   display: flex; align-items: center; justify-content: center; }
 .sec { padding: 14px 20px; border-bottom: 1px solid var(--border); }
+.details-toggle { display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; cursor: pointer; user-select: none;
+  font-family: var(--mono); font-size: 13px; color: var(--accent2);
+  border-bottom: 1px solid var(--border); background: rgba(79,142,255,0.04); }
+.details-toggle .arrow { transition: transform 0.2s; font-size: 11px; }
+.details-toggle.open .arrow { transform: rotate(90deg); }
+#details-body { display: none; }
+#details-body.open { display: block; }
 .sec-last { padding: 14px 20px; }
 .lbl { font-size: 10px; font-weight: 500; letter-spacing: .12em; color: var(--text2);
   text-transform: uppercase; margin-bottom: 10px; font-family: var(--mono); }
@@ -147,6 +155,7 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
 /* Geschwindigkeit */
 .speed-row { display: flex; align-items: center; gap: 12px; }
 .speed-row input[type=range] { flex: 1; accent-color: var(--accent); }
+.mag-anchor { font-family: var(--sans); font-size: 14px; color: var(--accent2); font-weight: 500; margin-top: 8px; }
 .speed-val { font-family: var(--mono); font-size: 13px; color: var(--accent2); min-width: 52px; text-align: right; }
 .meta-txt { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 4px; }
 
@@ -206,7 +215,13 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
 
 <!-- Top-Bar -->
 <div id="topbar">
-  <div class="logo">METEOR<span>LOG</span></div>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <div class="logo">METEOR<span>LOG</span></div>
+    <button onclick="showWelcomeInfo()" title="Info"
+      style="background:transparent;border:1px solid var(--border);border-radius:50%;
+             width:22px;height:22px;color:var(--text2);font-family:var(--mono);font-size:11px;
+             cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center;line-height:1;">?</button>
+  </div>
   <div id="datetime"></div>
 </div>
 
@@ -352,6 +367,38 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
   </div>
 </div>
 
+<!-- Welcome / Info Overlay -->
+<div id="welcome-info" style="display:none;position:fixed;inset:0;z-index:180;
+  background:rgba(4,6,15,0.88);align-items:center;justify-content:center;padding:24px;">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;
+    padding:24px;max-width:340px;width:100%;max-height:90vh;overflow-y:auto;">
+    <div style="font-family:var(--mono);font-size:12px;color:var(--accent2);letter-spacing:.08em;margin-bottom:16px;">
+      WILLKOMMEN BEI METEORLOG
+    </div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:18px;">
+      MeteorLog hilft dir, deine Meteorsichtungen zu dokumentieren. Richte dein Handy auf den Meteor, zeichne die Bewegung mit den Sensoren auf und beschreibe kurz, was du gesehen hast.
+    </div>
+    <div style="font-size:13px;color:var(--text2);line-height:2;margin-bottom:18px;">
+      <b style="color:var(--accent2);font-family:var(--mono);margin-right:6px;">1.</b>Taste halten und dem Meteor-Weg folgen<br>
+      <b style="color:var(--accent2);font-family:var(--mono);margin-right:6px;">2.</b>Details ergänzen — Helligkeit, Farbe, Geschwindigkeit, Schauer …<br>
+      <b style="color:var(--accent2);font-family:var(--mono);margin-right:6px;">3.</b>Speichern
+    </div>
+    <div style="font-size:11px;color:var(--text3);line-height:1.7;padding:10px 12px;
+      background:rgba(79,142,255,0.06);border-radius:8px;margin-bottom:18px;font-family:var(--mono);">
+      Keine Server-Übertragung · keine Tracker · keine Cookies<br>
+      GPS für deinen Standort<br>
+      Deine Sichtungen werden nur lokal in deinem Browser gespeichert
+    </div>
+    <button onclick="dismissWelcome()" style="width:100%;padding:12px;border-radius:10px;
+      background:var(--accent);border:none;color:white;font-family:var(--mono);font-size:13px;cursor:pointer;">
+      Los geht's
+    </button>
+    <div style="text-align:center;font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:14px;letter-spacing:.05em;">
+      MeteorLog · von Tobias Heiburg
+    </div>
+  </div>
+</div>
+
 <!-- Gerätehaltung Info-Overlay -->
 <div id="holding-info" style="display:none;position:fixed;inset:0;z-index:180;
   background:rgba(4,6,15,0.88);align-items:center;justify-content:center;padding:24px;">
@@ -386,7 +433,7 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
       <div style="font-size:12px;color:var(--text2);line-height:1.8;">
         <div style="color:var(--green);font-family:var(--mono);font-size:10px;margin-bottom:8px;">✓ RICHTIG</div>
         Gerät <b style="color:var(--text);">hochkant</b> halten, Display zu dir — wie beim Fotografieren einer Person.<br><br>
-        Die <b style="color:var(--text);">Kamera-Rückseite</b> zeigt zum Meteor. Zum Horizont zielen = 0°, weiter nach hinten kippen = höher am Himmel.<br><br>
+        Ziele einfach direkt auf die Stelle am Himmel, wo du den Meteor gesehen hast — als würdest du ihn filmen.<br><br>
         <b style="color:var(--text);">Taste halten</b> und dem Meteor-Weg langsam folgen — es zählt die Richtung, nicht das Tempo.
       </div>
     </div>
@@ -421,8 +468,7 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
       <div class="lbl">Aufgezeichneter Pfad</div>
       <div id="path-wrap">
         <div>
-          <canvas id="path-cv" width="130" height="100" style="display:block;border-radius:6px;"></canvas>
-          <canvas id="path-compass" width="130" height="52" style="display:block;margin-top:8px;border-radius:4px;"></canvas>
+          <canvas id="path-compass" width="150" height="150" style="display:block;border-radius:6px;"></canvas>
         </div>
         <div class="path-meta" id="path-meta">—</div>
       </div>
@@ -430,43 +476,32 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
 
     <!-- Helligkeit -->
     <div class="sec">
-      <div class="lbl">Helligkeit (Magnitude)</div>
-      <div class="chips" id="mag-chips">
-        <div class="chip" data-g="mag" data-v="-6" onclick="pick(this)">
-          <svg width="44" height="36" viewBox="0 0 44 36">
-            <circle cx="22" cy="18" r="14" fill="none" stroke="rgba(240,184,64,0.12)" stroke-width="0.5"/>
-            <circle cx="22" cy="18" r="9"  fill="rgba(240,184,64,0.1)"/>
-            <circle cx="22" cy="18" r="5"  fill="rgba(240,184,64,0.28)"/>
-            <circle cx="22" cy="18" r="2.5" fill="#f0b840"/>
-          </svg>
-          <span class="chip-lbl">Bolide<br>≤ −3</span>
-        </div>
-        <div class="chip" data-g="mag" data-v="-1" onclick="pick(this)">
-          <svg width="44" height="36" viewBox="0 0 44 36">
-            <circle cx="22" cy="18" r="8" fill="rgba(240,184,64,0.13)"/>
-            <circle cx="22" cy="18" r="4" fill="#f0b840" opacity="0.7"/>
-          </svg>
-          <span class="chip-lbl">Hell<br>−2 bis 0</span>
-        </div>
-        <div class="chip on" data-g="mag" data-v="2" onclick="pick(this)">
-          <svg width="44" height="36" viewBox="0 0 44 36">
-            <circle cx="22" cy="18" r="4" fill="rgba(200,216,248,0.22)"/>
-            <circle cx="22" cy="18" r="2" fill="#c8d8f8" opacity="0.6"/>
-          </svg>
-          <span class="chip-lbl">Mittel<br>+1 bis +3</span>
-        </div>
-        <div class="chip" data-g="mag" data-v="5" onclick="pick(this)">
-          <svg width="44" height="36" viewBox="0 0 44 36">
-            <circle cx="22" cy="18" r="2" fill="#6888b8" opacity="0.65"/>
-          </svg>
-          <span class="chip-lbl">Schwach<br>+4 bis +6</span>
-        </div>
+      <div class="lbl">Helligkeit — wie hell war der Meteor?</div>
+      <div class="speed-row">
+        <input type="range" id="mag-sl" min="0" max="5" value="3" step="1" oninput="setMag(this.value)">
       </div>
+      <div class="mag-anchor" id="mag-anchor">So hell wie die Sterne des Großen Wagens</div>
+      <div class="meta-txt" id="mag-hint">mittelheller Meteor · Magnitude ≈ +2</div>
+    </div>
+
+    <!-- Geschwindigkeit -->
+    <div class="sec">
+      <div class="lbl">Geschwindigkeit — IMO-Pflichtfeld</div>
+      <div class="speed-row">
+        <input type="range" id="speed-sl" min="1" max="40" value="15" step="1" oninput="setSpeed(this.value)">
+        <span class="speed-val" id="speed-val">15 °/s</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:5px;">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">Langsam</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--accent2);font-weight:500" id="speed-cls">Mittel</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">Sehr schnell</span>
+      </div>
+      <div class="meta-txt" id="speed-hint"></div>
     </div>
 
     <!-- Farbe -->
     <div class="sec">
-      <div class="lbl">Farbe <span class="lbl-hint" id="col-hint">(Mehrfachauswahl)</span></div>
+      <div class="lbl">Farbe <span class="lbl-hint" id="col-hint">(auffälligste zuerst antippen)</span></div>
       <div id="col-locked" style="display:none;font-family:var(--mono);font-size:11px;color:var(--text3);padding-bottom:6px;">Zu schwach für Farbwahrnehmung</div>
       <div class="chips" id="col-chips">
         <div class="chip" data-g="col" data-v="white" onclick="pickCol(this)">
@@ -496,20 +531,27 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
       </div>
     </div>
 
-    <!-- Geschwindigkeit -->
+    <!-- Schauer (IMO-Kürzel) -->
     <div class="sec">
-      <div class="lbl">Geschwindigkeit — IMO-Pflichtfeld</div>
-      <div class="speed-row">
-        <input type="range" id="speed-sl" min="1" max="40" value="15" step="1" oninput="setSpeed(this.value)">
-        <span class="speed-val" id="speed-val">15 °/s</span>
+      <div class="lbl">Meteorschauer (IMO-Kürzel)</div>
+      <div class="chips" style="gap:6px;" id="shower-chips">
+        <div class="chip shower-chip" data-g="shower" data-v="PER" onclick="pick(this)"><span class="chip-lbl">Perseiden (PER) Aug.</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="GEM" onclick="pick(this)"><span class="chip-lbl">Geminiden (GEM) Dez.</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="LEO" onclick="pick(this)"><span class="chip-lbl">Leoniden (LEO) Nov.</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="ETA" onclick="pick(this)"><span class="chip-lbl">η-Aquariiden (ETA) Mai</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="ORI" onclick="pick(this)"><span class="chip-lbl">Orioniden (ORI) Okt.</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="QUA" onclick="pick(this)"><span class="chip-lbl">Quadrantiden (QUA) Jan.</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="DRA" onclick="pick(this)"><span class="chip-lbl">Drakoniden (DRA) Okt.</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="SPO" onclick="pick(this)"><span class="chip-lbl">Sporadisch (SPO)</span></div>
       </div>
-      <div style="display:flex;justify-content:space-between;margin-top:5px;">
-        <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">Langsam</span>
-        <span style="font-family:var(--mono);font-size:10px;color:var(--accent2);font-weight:500" id="speed-cls">Mittel</span>
-        <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">Sehr schnell</span>
-      </div>
-      <div class="meta-txt" id="speed-hint"></div>
     </div>
+
+    <!-- Aufklappbarer Detail-Bereich -->
+    <div class="details-toggle" id="details-toggle" onclick="toggleDetails()">
+      <span>Mehr Details</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="details-body">
 
     <!-- Trail / Wake -->
     <div class="sec">
@@ -613,26 +655,13 @@ html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text
       <div class="meta-txt" id="lm-hint">Normaler Landhimmel — Milchstraße andeutungsweise</div>
     </div>
 
-    <!-- Schauer -->
-    <div class="sec">
-      <div class="lbl">Meteorschauer (IMO-Kürzel)</div>
-      <div class="chips" style="gap:6px;" id="shower-chips">
-        <div class="chip shower-chip" data-g="shower" data-v="PER" onclick="pick(this)"><span class="chip-lbl">Perseiden (PER) Aug.</span></div>
-        <div class="chip shower-chip" data-g="shower" data-v="GEM" onclick="pick(this)"><span class="chip-lbl">Geminiden (GEM) Dez.</span></div>
-        <div class="chip shower-chip" data-g="shower" data-v="LEO" onclick="pick(this)"><span class="chip-lbl">Leoniden (LEO) Nov.</span></div>
-        <div class="chip shower-chip" data-g="shower" data-v="ETA" onclick="pick(this)"><span class="chip-lbl">η-Aquariiden (ETA) Mai</span></div>
-        <div class="chip shower-chip" data-g="shower" data-v="ORI" onclick="pick(this)"><span class="chip-lbl">Orioniden (ORI) Okt.</span></div>
-        <div class="chip shower-chip" data-g="shower" data-v="QUA" onclick="pick(this)"><span class="chip-lbl">Quadrantiden (QUA) Jan.</span></div>
-        <div class="chip shower-chip" data-g="shower" data-v="DRA" onclick="pick(this)"><span class="chip-lbl">Drakoniden (DRA) Okt.</span></div>
-        <div class="chip shower-chip" data-g="shower" data-v="SPO" onclick="pick(this)"><span class="chip-lbl">Sporadisch (SPO)</span></div>
-      </div>
-    </div>
-
     <!-- Notiz -->
     <div class="sec-last">
-      <div class="lbl">Notiz</div>
-      <textarea id="notes" rows="3" placeholder="Weitere Beobachtungen…"></textarea>
+      <div class="lbl">Notiz / Besonderheiten</div>
+      <textarea id="notes" rows="5" placeholder="Besonderheiten: Fragmentierung, Farbwechsel, Feuerkugel, Geräusch …"></textarea>
     </div>
+
+    </div><!-- Ende #details-body -->
 
   </div><!-- Ende #pp-scroll -->
 
@@ -725,27 +754,11 @@ navigator.geolocation && navigator.geolocation.getCurrentPosition(
 // ══════════════════════════════════════════
 // SENSOREN — Quaternion (kein Gimbal Lock)
 // AbsoluteOrientationSensor mit referenceFrame:'device'
-// Kamera-Achse: [0, -1, 0] im Geräte-KS
-// (Display oben, Kamera an Oberkante, nach hinten kippen = EL steigt)
+// VERIFIZIERT (Pixel 7 Pro, Kompass-Abgleich):
+// Blickrichtung = Geräte-Längsachse [0,1,0] (Kamera-Oberkante)
+// via Rotationsmatrix. AZ = atan2(wz,wx)-180°, EL = asin(wy)
+// Haltung: hochkant, Objektiv zeigt zum Ziel (wie Barbie aufrecht nach Norden)
 // ══════════════════════════════════════════
-
-// Quaternion rotiert Vektor v
-function quatRotate(q, v) {
-  const [qw,qx,qy,qz] = q;
-  const [vx,vy,vz] = v;
-  const tx = 2*(qy*vz - qz*vy);
-  const ty = 2*(qz*vx - qx*vz);
-  const tz = 2*(qx*vy - qy*vx);
-  return [
-    vx + qw*tx + qy*tz - qz*ty,
-    vy + qw*ty + qz*tx - qx*tz,
-    vz + qw*tz + qx*ty - qy*tx
-  ];
-}
-
-// Kamera zeigt entlang +Y im Geräte-KS
-// (bestätigt durch Messung: flach/Nord → q≈[1,0,0,0], Kamera=Nord=+Y)
-const CAM_AXIS = [0, -1, 0];
 
 // ── Debug ──
 let dbgVisible = false;
@@ -867,15 +880,23 @@ function handleOri(e) {
 function updateFromQuat(q) {
   dbgRaw.qw=q[0]; dbgRaw.qx=q[1]; dbgRaw.qy=q[2]; dbgRaw.qz=q[3];
 
-  // Kamera-Vektor im Weltkoordinatensystem
-  const [wx, wy, wz] = quatRotate(q, CAM_AXIS);
+  // Rotationsmatrix aus Quaternion (Gerät → Welt)
+  const w=q[0], x=q[1], y=q[2], z=q[3];
+  const R = [
+    [1-2*(y*y+z*z), 2*(x*y-w*z),   2*(x*z+w*y)],
+    [2*(x*y+w*z),   1-2*(x*x+z*z), 2*(y*z-w*x)],
+    [2*(x*z-w*y),   2*(y*z+w*x),   1-2*(x*x+y*y)]
+  ];
 
-  // Verifiziert (Pixel 7 Pro, AbsoluteOrientationSensor referenceFrame:'device'):
-  // Welt-KS: Ost=+Z, Nord=+X, Oben=-Y
-  // AZ = atan2(Ost, Nord) = atan2(wz, wx) → Nord=0°, Ost=90°
-  // EL = asin(Oben) = asin(-wy) → Horizont=0°, Zenit=90°
-  const az = ((Math.atan2(wz, wx) * 180 / Math.PI) + 360) % 360;
-  const el = Math.asin(Math.max(-1, Math.min(1, -wy))) * 180 / Math.PI;
+  // Blickrichtung = Geräte-Längsachse [0,1,0] (Kamera-Oberkante)
+  // = zweite Spalte der Rotationsmatrix
+  const bx = R[0][1], by = R[1][1], bz = R[2][1];
+
+  // VERIFIZIERT (Pixel 7 Pro, Kompass-Abgleich über alle Richtungen):
+  // AZ = atan2(wz, wx) - 180°  (Nord=0°, Ost=90°, Süd=180°, West=270°)
+  // EL = asin(wy)              (Horizont=0°, Zenit=90°)
+  const az = ((Math.atan2(bz, bx) * 180 / Math.PI) - 180 + 720) % 360;
+  const el = Math.asin(Math.max(-1, Math.min(1, by))) * 180 / Math.PI;
 
   S.az = az;
   S.el = Math.max(0, Math.min(90, el));
@@ -888,20 +909,8 @@ function updateFromQuat(q) {
 initSensors();
 
 // ══════════════════════════════════════════
-// MAUS / TOUCH SIMULATION
+// HUD / ANZEIGE
 // ══════════════════════════════════════════
-function simXY(px, py) {
-  if (S.sensorActive) return;
-  const hw = innerWidth/2, hh = innerHeight/2;
-  S.az = ((Math.atan2(px-hw, -(py-hh)) * 180/Math.PI) + 360) % 360;
-  S.el = Math.max(0, Math.min(90, 90 - Math.hypot(px-hw, py-hh) / Math.min(hw,hh) * 90));
-  updateHUD();
-  if (S.recording) addPt();
-  drawPath();
-}
-cv.addEventListener('mousemove', e => simXY(e.clientX, e.clientY));
-cv.addEventListener('touchmove', e => { e.preventDefault(); simXY(e.touches[0].clientX, e.touches[0].clientY); }, {passive:false});
-
 function updateHUD() {
   document.getElementById('az-hud').innerHTML = `AZ <b>${S.az.toFixed(1)}°</b>`;
   document.getElementById('el-hud').innerHTML = `EL <b>${S.el.toFixed(1)}°</b>`;
@@ -911,9 +920,23 @@ function updateHUD() {
 // PFAD-AUFNAHME
 // ══════════════════════════════════════════
 function addPt() {
-  S.path.push({ az:S.az, el:S.el, t:(Date.now()-S.recStart)/1000 });
+ // Beruhigungszeit: erste 0.3s nach Druck verwerfen (Finger-Ruck)
+  if ((Date.now()-S.recStart)/1000 < 0.3) return;
+  // Glättung: neuer Punkt gemittelt mit den letzten Werten (dämpft Zittern)
+  let az=S.az, el=S.el;
+  const n=S.path.length;
+  if (n>0) {
+    const prev=S.path[n-1];
+    // Azimut sauber über 0°/360°-Grenze mitteln
+    let d=az-prev.az;
+    if (d>180) d-=360; if (d<-180) d+=360;
+    az=prev.az + d*0.4;   // 0.4 = Glättungsstärke (kleiner = glatter)
+    if (az<0) az+=360; if (az>=360) az-=360;
+    el=prev.el + (el-prev.el)*0.4;
+  }
+  S.path.push({ az, el, t:(Date.now()-S.recStart)/1000 });
   updateRecStats();
-}
+}  
 function calcArc() {
   if (S.path.length < 2) return 0;
   const a = S.path[0], b = S.path[S.path.length-1];
@@ -935,23 +958,27 @@ function updateRecStats() {
 // PFAD AUF HAUPTHIMMEL ZEICHNEN
 // ══════════════════════════════════════════
 function azElToXY(az, el) {
-  const hx=cv.width/2, hy=cv.height/2, r=Math.min(hx,hy)*0.85;
-  const dist=(1-el/90)*r, rad=(az-90)*Math.PI/180;
-  return {x: hx+dist*Math.cos(rad), y: hy+dist*Math.sin(rad)};
-}
+  // Natürliche Himmelsansicht: Azimut horizontal, Elevation vertikal
+  // Bildmitte = Blickrichtung; ±90° Sichtfeld auf die Bildschirmbreite
+  const hx=cv.width/2, hy=cv.height/2;
+  const spanX=Math.min(hx,hy)*0.85/45;  // Skalierung: 45° = voller Radius
+  // Azimut-Differenz zur Bildmitte, sauber über die 0°/360°-Grenze
+  let daz=az-S.azCenter;
+  if (daz>180) daz-=360; if (daz<-180) daz+=360;
+  const del=el-S.elCenter;
+  return {x: hx+daz*spanX, y: hy-del*spanX};
+}  
 function drawPath() {
+  // Beim Aufzeichnen KEIN kritzelnder Pfad mehr (lenkt vom Himmel ab).
+  // Nur ein ruhiger, dezenter Punkt an der aktuellen Blickrichtung.
   cx.clearRect(0,0,cv.width,cv.height);
-  if (S.path.length < 2) return;
-  const pts = S.path.map(p => azElToXY(p.az, p.el));
-  [[0.12,14,'#4f8eff'],[0.3,5,'#a0c0ff'],[1,1.5,'#c8d8f8']].forEach(([a,w,c])=>{
-    cx.save(); cx.globalAlpha=a; cx.strokeStyle=c; cx.lineWidth=w;
-    cx.lineCap='round'; cx.lineJoin='round';
-    cx.beginPath(); cx.moveTo(pts[0].x,pts[0].y); pts.slice(1).forEach(p=>cx.lineTo(p.x,p.y)); cx.stroke(); cx.restore();
-  });
-  cx.save(); cx.fillStyle='rgba(100,136,184,0.5)'; cx.beginPath(); cx.arc(pts[0].x,pts[0].y,3,0,Math.PI*2); cx.fill(); cx.restore();
-  const L=pts[pts.length-1];
-  cx.save(); cx.fillStyle='#f0b840'; cx.shadowColor='#f0b840'; cx.shadowBlur=8;
-  cx.beginPath(); cx.arc(L.x,L.y,4.5,0,Math.PI*2); cx.fill(); cx.restore();
+  if (S.path.length < 1) return;
+  const L = azElToXY(S.az, S.el);
+  cx.save();
+  cx.fillStyle='#f0b840'; cx.shadowColor='#f0b840'; cx.shadowBlur=12;
+  cx.globalAlpha=0.85;
+  cx.beginPath(); cx.arc(L.x,L.y,5,0,Math.PI*2); cx.fill();
+  cx.restore();
 }
 
 // ══════════════════════════════════════════
@@ -969,6 +996,8 @@ function startRec() {
     return; // Ersten Druck nur für Berechtigung nutzen, nicht aufnehmen
   }
   S.path=[]; S.recStart=Date.now(); S.recording=true;
+  S.azCenter=S.az; S.elCenter=S.el;
+  
   recBtn.classList.add('rec');
   document.getElementById('rec-stats').classList.add('on');
   document.getElementById('rec-hint').textContent = 'Kamera → Meteor · Taste halten · Folgen';
@@ -1009,42 +1038,8 @@ function closeProps() {
 
 // ── Pfad-Vorschau (statisch) ──
 function renderPathPreview() {
-  const c = document.getElementById('path-cv');
-  const x = c.getContext('2d');
-  x.clearRect(0,0,130,100); x.fillStyle='#080d1a'; x.fillRect(0,0,130,100);
   const path = S.path; if (path.length<2) return;
-  const azs=path.map(p=>p.az), els=path.map(p=>p.el);
-  const minAz=Math.min(...azs), maxAz=Math.max(...azs);
-  const minEl=Math.min(...els), maxEl=Math.max(...els);
-  const pad=14, W=130-pad*2, H=100-pad*2;
-  const rAz=Math.max(maxAz-minAz,4), rEl=Math.max(maxEl-minEl,4);
-  const toXY = p => ({x: pad+(p.az-minAz)/rAz*W, y: pad+H-(p.el-minEl)/rEl*H});
-  const pts = path.map(toXY);
-  // Gitter
-  x.strokeStyle='rgba(79,142,255,0.07)'; x.lineWidth=0.5;
-  for(let i=0;i<=4;i++){
-    x.beginPath();x.moveTo(pad+i*(W/4),pad);x.lineTo(pad+i*(W/4),pad+H);x.stroke();
-    x.beginPath();x.moveTo(pad,pad+i*(H/4));x.lineTo(pad+W,pad+i*(H/4));x.stroke();
-  }
-  // Himmelsrichtungen
-  x.fillStyle='rgba(138,170,216,0.45)'; x.font='7px monospace'; x.textAlign='center';
-  x.fillText('N',65,10); x.fillText('S',65,98); x.textAlign='right'; x.fillText('W',2,56); x.textAlign='left'; x.fillText('O',128,56);
-  // Linie
-  x.strokeStyle='#4f8eff'; x.lineWidth=7; x.globalAlpha=0.1; x.lineCap='round'; x.lineJoin='round';
-  x.beginPath(); x.moveTo(pts[0].x,pts[0].y); pts.slice(1).forEach(p=>x.lineTo(p.x,p.y)); x.stroke();
-  x.strokeStyle='#c8d8f8'; x.lineWidth=1.5; x.globalAlpha=1;
-  x.beginPath(); x.moveTo(pts[0].x,pts[0].y); pts.slice(1).forEach(p=>x.lineTo(p.x,p.y)); x.stroke();
-  x.fillStyle='rgba(100,136,184,0.55)'; x.beginPath(); x.arc(pts[0].x,pts[0].y,3,0,Math.PI*2); x.fill();
-  const L=pts[pts.length-1];
-  x.fillStyle='#f0b840'; x.shadowColor='#f0b840'; x.shadowBlur=5;
-  x.beginPath(); x.arc(L.x,L.y,4,0,Math.PI*2); x.fill(); x.shadowBlur=0;
-  // Richtungspfeil
-  const mx=(pts[0].x+L.x)/2, my=(pts[0].y+L.y)/2, ang=Math.atan2(L.y-pts[0].y,L.x-pts[0].x);
-  x.strokeStyle='rgba(240,184,64,0.45)'; x.lineWidth=1; x.globalAlpha=0.85;
-  x.beginPath();x.moveTo(mx-Math.cos(ang-0.4)*9,my-Math.sin(ang-0.4)*9);x.lineTo(mx,my);x.lineTo(mx-Math.cos(ang+0.4)*9,my-Math.sin(ang+0.4)*9);x.stroke(); x.globalAlpha=1;
-  // Kompass
-  renderCompass(path);
-  // Meta
+  // Meta-Werte
   const dur=path[path.length-1].t.toFixed(1);
   const arc=calcArc().toFixed(1);
   const vel=parseFloat(dur)>0.1?(calcArc()/parseFloat(dur)).toFixed(1):'—';
@@ -1052,23 +1047,45 @@ function renderPathPreview() {
     `Von: <b>${azToDir(path[0].az)} ${path[0].el.toFixed(0)}°</b><br>` +
     `Nach: <b>${azToDir(path[path.length-1].az)} ${path[path.length-1].el.toFixed(0)}°</b><br>` +
     `Bogen: <b>~${arc}°</b><br>Dauer: <b>${dur}s</b><br>Ø v: <b>${vel!=='—'?vel+'°/s':'—'}</b>`;
+  renderCompass(path);
 }
 function renderCompass(path) {
   const c=document.getElementById('path-compass'), x=c.getContext('2d');
-  x.clearRect(0,0,130,52);
-  const hx=65, hy=30, r=18;
-  x.strokeStyle='rgba(79,142,255,0.18)'; x.lineWidth=1; x.beginPath(); x.arc(hx,hy,r,0,Math.PI*2); x.stroke();
-  x.fillStyle='rgba(138,170,216,0.5)'; x.font='7px monospace';
-  x.textAlign='center'; x.fillText('N',hx,hy-r-3); x.fillText('S',hx,hy+r+9);
-  x.textAlign='right';  x.fillText('W',hx-r-3,hy+3);
-  x.textAlign='left';   x.fillText('O',hx+r+3,hy+3);
-  const toR = az => (az-90)*Math.PI/180;
-  const sx=hx+Math.cos(toR(path[0].az))*(r-3), sy=hy+Math.sin(toR(path[0].az))*(r-3);
-  const ex=hx+Math.cos(toR(path[path.length-1].az))*(r-3), ey=hy+Math.sin(toR(path[path.length-1].az))*(r-3);
-  x.strokeStyle='rgba(200,216,248,0.45)'; x.lineWidth=1.5; x.lineCap='round';
-  x.beginPath(); x.moveTo(sx,sy); x.lineTo(ex,ey); x.stroke();
-  x.fillStyle='rgba(100,136,184,0.55)'; x.beginPath(); x.arc(sx,sy,2.5,0,Math.PI*2); x.fill();
-  x.fillStyle='#f0b840'; x.beginPath(); x.arc(ex,ey,3.5,0,Math.PI*2); x.fill();
+  const S2=150; x.clearRect(0,0,S2,S2);
+  const hx=75, hy=75, r=58;
+  // Kreis
+  x.strokeStyle='rgba(79,142,255,0.25)'; x.lineWidth=1.5;
+  x.beginPath(); x.arc(hx,hy,r,0,Math.PI*2); x.stroke();
+  // innerer Ring (Elevation-Andeutung)
+  x.strokeStyle='rgba(79,142,255,0.10)'; x.lineWidth=1;
+  x.beginPath(); x.arc(hx,hy,r*0.5,0,Math.PI*2); x.stroke();
+  // Himmelsrichtungen
+  x.fillStyle='rgba(138,170,216,0.7)'; x.font='11px monospace'; x.textAlign='center';
+  x.fillText('N',hx,hy-r-6); x.fillText('S',hx,hy+r+14);
+  x.textAlign='right';  x.fillText('W',hx-r-6,hy+4);
+  x.textAlign='left';   x.fillText('O',hx+r+6,hy+4);
+  // Position: Azimut = Winkel, Elevation = Abstand (Horizont=Rand, Zenit=Mitte)
+  const toXY = p => {
+    const rad=(p.az-90)*Math.PI/180;
+    const dist=(1-Math.max(0,Math.min(90,p.el))/90)*(r-6);
+    return {x:hx+Math.cos(rad)*dist, y:hy+Math.sin(rad)*dist};
+  };
+  const s=toXY(path[0]), e=toXY(path[path.length-1]);
+  // Linie Start→Ende
+  x.strokeStyle='rgba(200,216,248,0.55)'; x.lineWidth=2; x.lineCap='round';
+  x.beginPath(); x.moveTo(s.x,s.y); x.lineTo(e.x,e.y); x.stroke();
+  // Richtungspfeil in der Mitte der Linie
+  const mx=(s.x+e.x)/2, my=(s.y+e.y)/2, ang=Math.atan2(e.y-s.y,e.x-s.x);
+  x.strokeStyle='#f0b840'; x.lineWidth=2; x.globalAlpha=0.9;
+  x.beginPath();
+  x.moveTo(mx-Math.cos(ang-0.5)*8,my-Math.sin(ang-0.5)*8);
+  x.lineTo(mx+Math.cos(ang)*4,my+Math.sin(ang)*4);
+  x.lineTo(mx-Math.cos(ang+0.5)*8,my-Math.sin(ang+0.5)*8);
+  x.stroke(); x.globalAlpha=1;
+  // Start-Punkt (blau) und End-Punkt (gelb, leuchtend)
+  x.fillStyle='rgba(100,136,184,0.7)'; x.beginPath(); x.arc(s.x,s.y,4,0,Math.PI*2); x.fill();
+  x.fillStyle='#f0b840'; x.shadowColor='#f0b840'; x.shadowBlur=8;
+  x.beginPath(); x.arc(e.x,e.y,5,0,Math.PI*2); x.fill(); x.shadowBlur=0;
 }
 function azToDir(az) {
   return ['N','NNO','NO','ONO','O','OSO','SO','SSO','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(az/22.5)%16];
@@ -1088,8 +1105,10 @@ const COLOR_MAP = {
 
 function getMeteorColors() {
   const cols = S.p.col; const speed = S.p.speed;
-  if (cols && cols.length > 0 && cols[0] !== 'white') return COLOR_MAP[cols[0]] || COLOR_MAP.white;
-  // Physikalisch: langsam=rot, mittel=gelb, schnell=blau
+  // Wurde mindestens eine Farbe gewählt? Dann die auffälligste (erste) nehmen.
+  // (IMO: Farben werden in Reihenfolge der Auffälligkeit notiert)
+  if (cols && cols.length > 0) return COLOR_MAP[cols[0]] || COLOR_MAP.white;
+  // Keine Farbe gewählt → physikalische Schätzung aus Geschwindigkeit
   if (speed < 8)  return COLOR_MAP.red;
   if (speed < 20) return COLOR_MAP.yellow;
   return COLOR_MAP.blue;
@@ -1198,6 +1217,32 @@ function updatePreviewInfo() {
 // ══════════════════════════════════════════
 // CHIP-AUSWAHL
 // ══════════════════════════════════════════
+// ── Helligkeit: Schieberegler mit 6 Stufen ──
+// Jede Stufe: gespeicherter Magnitude-Wert (IMO), Anker-Text, Hinweis, Punkt-Helligkeit(0..1)
+const MAG_STEPS = [
+  { v:'-4', anchor:'Feuerkugel — heller als alles, wirft Schatten', hint:'Bolide · Magnitude ≈ −4 oder heller' },
+  { v:'-2', anchor:'So hell wie die Venus — der helle Planet', hint:'sehr heller Meteor · Magnitude ≈ −2' },
+  { v:'-1', anchor:'So hell wie Sirius — der hellste Stern', hint:'heller Meteor · Magnitude ≈ −1' },
+  { v:'2',  anchor:'So hell wie die Sterne des Großen Wagens', hint:'mittelheller Meteor · Magnitude ≈ +2' },
+  { v:'3',  anchor:'So hell wie die Sterne der Cassiopeia (Himmels-W)', hint:'schwächerer Meteor · Magnitude ≈ +3' },
+  { v:'5',  anchor:'Schwach — kaum zu sehen, fast übersehen', hint:'sehr schwacher Meteor · Magnitude ≈ +5' },
+];
+function setMag(idx) {
+  idx = parseInt(idx);
+  const step = MAG_STEPS[idx];
+  S.p.mag = step.v;
+  document.getElementById('mag-anchor').textContent = step.anchor;
+  document.getElementById('mag-hint').textContent = step.hint;
+  document.getElementById('mag-sl').value = idx;
+  updateColLock();
+  updatePreviewInfo();
+}
+function toggleDetails() {
+  const t=document.getElementById('details-toggle');
+  const b=document.getElementById('details-body');
+  t.classList.toggle('open'); b.classList.toggle('open');
+}
+
 function pick(el) {
   const g=el.dataset.g;
   document.querySelectorAll(`[data-g="${g}"]`).forEach(c=>c.classList.remove('on'));
@@ -1222,7 +1267,8 @@ function pickLm(el) {
   drawLmSky(parseFloat(el.dataset.v));
 }
 function updateColLock() {
-  const weak = S.p.mag==='5';
+  // Farbe ab Magnitude ≥ +3 nicht mehr wahrnehmbar (IMO: schwächer als +2)
+  const weak = parseFloat(S.p.mag) > 2;
   const chips=document.getElementById('col-chips');
   const locked=document.getElementById('col-locked');
   chips.style.opacity=weak?'0.25':'1';
@@ -1285,6 +1331,7 @@ function saveSighting() {
     sound:S.p.sound, shower:S.p.shower, speed:S.p.speed, lm:S.p.lm,
     notes: document.getElementById('notes').value
   });
+  persistSightings();
   closeProps();
   cx.clearRect(0,0,cv.width,cv.height);
   showToast('Sichtung gespeichert ✓');
@@ -1317,6 +1364,7 @@ function closeList() {
 function deleteSighting(id) {
   if(listAnims[id]){ cancelAnimationFrame(listAnims[id]); delete listAnims[id]; }
   S.sightings=S.sightings.filter(s=>s.id!==id);
+  persistSightings();
   if(!S.sightings.length) document.getElementById('list-btn').classList.remove('on');
   renderList();
 }
@@ -1503,11 +1551,62 @@ function dismissHoldingInfo() {
 }
 
 // ══════════════════════════════════════════
+// WELCOME / INFO OVERLAY
+// ══════════════════════════════════════════
+function showWelcomeInfo() {
+  document.getElementById('welcome-info').style.display = 'flex';
+}
+function dismissWelcome() {
+  document.getElementById('welcome-info').style.display = 'none';
+  try { localStorage.setItem('meteorlog_welcome_seen', '1'); } catch(e) {}
+}
+function maybeShowWelcomeOnStart() {
+  try {
+    if (!localStorage.getItem('meteorlog_welcome_seen')) {
+      showWelcomeInfo();
+    }
+  } catch(e) {
+    // Kein localStorage verfügbar (z.B. Private Mode strict) → einfach zeigen
+    showWelcomeInfo();
+  }
+}
+
+// ══════════════════════════════════════════
+// LOCALSTORAGE — SICHTUNGEN PERSISTENZ
+// ══════════════════════════════════════════
+function persistSightings() {
+  try {
+    localStorage.setItem('meteorlog_sightings', JSON.stringify(S.sightings));
+  } catch(e) {
+    console.warn('MeteorLog: Speichern in localStorage fehlgeschlagen', e);
+  }
+}
+function loadSightings() {
+  try {
+    const raw = localStorage.getItem('meteorlog_sightings');
+    if (!raw) return;
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      S.sightings = parsed;
+      if (S.sightings.length) {
+        document.getElementById('list-btn').classList.add('on');
+      }
+    }
+  } catch(e) {
+    console.warn('MeteorLog: Laden aus localStorage fehlgeschlagen', e);
+    S.sightings = [];
+  }
+}
+
+// ══════════════════════════════════════════
 // INIT
 // ══════════════════════════════════════════
+loadSightings();
+maybeShowWelcomeOnStart();
 updateHUD();
 setSpeed(15);
 drawLmSky(5);
+setMag(3);
 checkSensorStatus();
 </script>
 </body>
