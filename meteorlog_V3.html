@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>MeteorLog V1.0 11.08.26 18:45</title>
+<title>MeteorLog V1.0 13.08.26 20:31</title>
 
 <style>
 :root {
@@ -1504,7 +1504,7 @@ function drawListStill(s) {
   const speed=s.speed||15, mag=parseFloat(s.mag)||2, trail=s.trail||'none';
   const cols=s.col||[];
   let cm;
-  if(cols.length>0&&cols[0]!=='white') cm=COLOR_MAP[cols[0]]||COLOR_MAP.white;
+  if(cols.length>0) cm=COLOR_MAP[cols[0]]||COLOR_MAP.white;
   else if(speed<8) cm=COLOR_MAP.red; else if(speed<20) cm=COLOR_MAP.yellow; else cm=COLOR_MAP.blue;
   const {head,core,trail:tc,glow:gc}=cm;
   const trailPx={none:8,wake:28,train_short:60,train_persist:110,train_long:190}[trail]||20;
@@ -1547,7 +1547,7 @@ function startListAnim(s, onDone) {
   const speed=s.speed||15, mag=parseFloat(s.mag)||2, trail=s.trail||'none', light=s.light||'steady';
   const cols=s.col||[];
   let cm;
-  if(cols.length>0&&cols[0]!=='white') cm=COLOR_MAP[cols[0]]||COLOR_MAP.white;
+  if(cols.length>0) cm=COLOR_MAP[cols[0]]||COLOR_MAP.white;
   else if(speed<8) cm=COLOR_MAP.red; else if(speed<20) cm=COLOR_MAP.yellow; else cm=COLOR_MAP.blue;
   const {head,core,trail:tc,glow:gc}=cm;
   const trailPx={none:8,wake:28,train_short:60,train_persist:110,train_long:190}[trail]||20;
