@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>MeteorLog V3.2 160826/18:22</title>
+
+<style>
+:root {
+  --bg:      #04060f;
+  --bg2:     #080d1a;
+  --border:  rgba(100,140,255,0.28);
+  --border2: rgba(100,140,255,0.48);
+  --accent:  #4f8eff;
+  --accent2: #7eb3ff;
+  --gold:    #f0b840;
+  --red:     #ff6b6b;
+  --green:   #4ecf8a;
+  --text:    #c8d8f8;
+  --text2:   #8aaad8;
+  --text3:   #5570a0;
+  --mono:    'Courier New', Courier, monospace;
+  --sans:    -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); overflow: hidden; }
+
+/* ── Sternenhimmel ── */
+#sky { position: fixed; inset: 0; background: radial-gradient(ellipse at 50% 0%, #0a1535 0%, #04060f 70%); overflow: hidden; }
+.star { position: absolute; border-radius: 50%; background: white; }
+@keyframes twinkle { 0%,100%{ opacity: var(--o); transform: scale(1); } 50%{ opacity: calc(var(--o)*0.3); transform: scale(0.7); } }
+.star.t { animation: twinkle var(--d,3s) ease-in-out infinite var(--dl,0s); }
+
+#canvas { position: fixed; inset: 0; cursor: crosshair; touch-action: none; }
+
+/* ── Top-Bar ── */
+#topbar { position: fixed; top: 0; left: 0; right: 0; padding: 14px 20px 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: linear-gradient(to bottom, rgba(4,6,15,0.95), transparent); z-index: 100; }
+.logo { font-family: var(--mono); font-size: 15px; letter-spacing: .12em; color: var(--accent2); }
+.logo span { color: var(--gold); }
+#datetime { font-family: var(--mono); font-size: 11px; color: var(--text3); text-align: right; line-height: 1.6; }
+
+/* ── HUD ── */
+#hud { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 8px; z-index: 100; flex-wrap: wrap; justify-content: center; padding: 0 12px; }
+.pill { background: rgba(8,13,26,0.92); border: 1px solid var(--border); border-radius: 20px;
+  padding: 5px 12px; font-family: var(--mono); font-size: 11px; color: var(--text2);
+  display: flex; align-items: center; gap: 6px; backdrop-filter: blur(8px); }
+.pill b { color: var(--accent2); font-weight: 400; }
+.dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
+.dot.off { background: var(--text3); }
+
+/* ── Fadenkreuz ── */
+#crosshair { position: fixed; left: 50%; top: 50%; transform: translate(-50%,-50%);
+  width: 40px; height: 40px; z-index: 100; pointer-events: none; }
+#crosshair::before, #crosshair::after { content: ''; position: absolute; background: rgba(79,142,255,0.6); }
+#crosshair::before { left: 50%; top: 0; width: 1px; height: 100%; }
+#crosshair::after  { top: 50%; left: 0; height: 1px; width: 100%; }
+.ch-ring { position: absolute; inset: 8px; border: 1px solid rgba(79,142,255,0.4); border-radius: 50%; }
+
+/* ── Aufnahme-Bereich — oberes Drittel, aber unter dem HUD ── */
+#rec-area { position: fixed; top: 130px; left: 0; right: 0;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  z-index: 100; pointer-events: none; }
+#rec-area > * { pointer-events: auto; }
+#rec-hint { font-size: 11px; color: var(--text3); letter-spacing: .06em; font-family: var(--mono); text-transform: uppercase; }
+#rec-stats { display: none; flex-direction: row; gap: 14px; font-family: var(--mono); font-size: 11px; color: var(--text2); flex-wrap: wrap; justify-content: center; }
+#rec-stats.on { display: flex; }
+#rec-stats b { color: var(--accent2); }
+#rec-btn { width: 72px; height: 72px; border-radius: 50%; background: rgba(4,6,15,0.6);
+  border: 2px solid var(--accent); cursor: pointer; position: relative;
+  transition: transform .15s, border-color .15s; display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px); }
+#rec-btn::before { content: ''; width: 44px; height: 44px; border-radius: 50%; background: var(--accent); transition: background .15s; }
+#rec-btn.rec { border-color: var(--red); animation: pulse 1s ease-in-out infinite; }
+#rec-btn.rec::before { background: var(--red); border-radius: 6px; width: 26px; height: 26px; }
+@keyframes pulse { 0%,100%{ box-shadow: 0 0 0 0 rgba(255,107,107,0.4); } 50%{ box-shadow: 0 0 0 14px rgba(255,107,107,0); } }
+#rec-btn:active { transform: scale(0.93); }
+
+/* ── Toast ── */
+#toast { position: fixed; top: 80px; left: 50%; transform: translateX(-50%) translateY(-20px);
+  background: rgba(78,207,138,0.15); border: 1px solid rgba(78,207,138,0.4); border-radius: 24px;
+  padding: 8px 20px; font-family: var(--mono); font-size: 12px; color: var(--green);
+  opacity: 0; transition: opacity .3s, transform .3s; z-index: 300; white-space: nowrap; pointer-events: none; }
+#toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── Listen-Button — unten rechts ── */
+#list-btn { position: fixed; bottom: 30px; right: 20px; display: none;
+  background: rgba(8,13,26,0.85); border: 1px solid var(--border); border-radius: 20px;
+  padding: 8px 14px; font-family: var(--mono); font-size: 10px; color: var(--text2);
+  letter-spacing: .08em; z-index: 150; cursor: pointer; backdrop-filter: blur(8px); }
+#list-btn.on { display: block; }
+
+/* ══════════════════════════════════════════
+   EIGENSCHAFTEN-PANEL
+   Struktur: fixed fullscreen flex-column
+   ├── #pp-scroll   (flex:1, overflow-y:auto) ← alle Einstellungen
+   └── #pp-footer   (flex-shrink:0)           ← Preview-Animation + Speichern
+══════════════════════════════════════════ */
+#props-panel {
+  position: fixed; inset: 0; z-index: 200;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  transform: translateY(100%);
+  transition: transform .4s cubic-bezier(.25,.8,.25,1);
+}
+#props-panel.open { transform: translateY(0); }
+
+#pp-scroll { flex: 1; overflow-y: auto; overflow-x: hidden; }
+#pp-footer  { flex-shrink: 0; border-top: 1px solid var(--border); background: var(--bg); }
+
+/* Panel-Teile */
+.ph { padding: 18px 20px 14px; display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 5; }
+.ph-title { font-family: var(--mono); font-size: 14px; color: var(--accent2); letter-spacing: .1em; }
+.x-btn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--border);
+  background: transparent; color: var(--text2); cursor: pointer; font-size: 16px;
+  display: flex; align-items: center; justify-content: center; }
+.sec { padding: 14px 20px; border-bottom: 1px solid var(--border); }
+.details-toggle { display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; cursor: pointer; user-select: none;
+  font-family: var(--mono); font-size: 13px; color: var(--accent2);
+  border-bottom: 1px solid var(--border); background: rgba(79,142,255,0.04); }
+.details-toggle .arrow { transition: transform 0.2s; font-size: 11px; }
+.details-toggle.open .arrow { transform: rotate(90deg); }
+#details-body { display: none; }
+#details-body.open { display: block; }
+.sec-last { padding: 14px 20px; }
+.lbl { font-size: 10px; font-weight: 500; letter-spacing: .12em; color: var(--text2);
+  text-transform: uppercase; margin-bottom: 10px; font-family: var(--mono); }
+.lbl-hint { color: var(--text3); font-size: 9px; letter-spacing: 0; font-weight: 400; }
+
+/* Pfad-Vorschau */
+#path-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px; display: flex; gap: 14px; align-items: flex-start; }
+.path-meta { font-family: var(--mono); font-size: 11px; color: var(--text2); line-height: 2.1; }
+.path-meta b { color: var(--accent2); font-weight: 400; }
+
+/* Chips */
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 8px 8px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg2);
+  cursor: pointer; min-width: 64px; flex: 1; max-width: 80px; transition: border-color .15s, background .15s; }
+.chip:hover { border-color: var(--border2); }
+.chip.on { border-color: var(--accent); background: rgba(79,142,255,0.1); }
+.chip svg { display: block; }
+.chip-lbl { font-size: 10px; color: var(--text2); text-align: center; line-height: 1.3; font-family: var(--mono); }
+.chip.on .chip-lbl { color: var(--accent2); }
+
+/* Shower-Chips (text-only, breit) */
+.shower-chip { flex: none; flex-direction: row; max-width: none; padding: 8px 12px; }
+.shower-chip .chip-lbl { font-size: 11px; }
+
+/* Geschwindigkeit */
+.speed-row { display: flex; align-items: center; gap: 12px; }
+.speed-row input[type=range] { flex: 1; accent-color: var(--accent); }
+.mag-anchor { font-family: var(--sans); font-size: 14px; color: var(--accent2); font-weight: 500; margin-top: 8px; }
+.speed-val { font-family: var(--mono); font-size: 13px; color: var(--accent2); min-width: 52px; text-align: right; }
+.meta-txt { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 4px; }
+
+/* Grenzgröße */
+.lm-row { display: flex; gap: 6px; }
+.lm-chip { flex: 1; padding: 8px 4px; border-radius: 8px; text-align: center;
+  border: 1px solid var(--border); background: var(--bg2); cursor: pointer;
+  font-family: var(--mono); font-size: 12px; color: var(--text2); transition: border-color .15s, background .15s; }
+.lm-chip.on { border-color: var(--accent); color: var(--accent2); background: rgba(79,142,255,0.1); }
+
+/* Textarea */
+#notes { width: 100%; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px; color: var(--text); font-family: var(--sans);
+  font-size: 13px; resize: none; outline: none; transition: border-color .15s; }
+#notes:focus { border-color: var(--accent); }
+#notes::placeholder { color: var(--text3); }
+
+/* Footer: Preview-Canvas + Speichern */
+#preview-canvas { width: 100%; height: 72px; display: block; background: #020408; }
+#preview-info { font-family: var(--mono); font-size: 9px; color: var(--text3);
+  padding: 4px 16px 6px; line-height: 1.5; min-height: 18px; }
+#save-btn { display: block; width: calc(100% - 32px); margin: 8px 16px 20px;
+  padding: 15px; border-radius: 12px; background: var(--accent); border: none; color: #fff;
+  font-family: var(--mono); font-size: 14px; letter-spacing: .08em; cursor: pointer;
+  transition: transform .1s, opacity .1s; }
+#save-btn:active { transform: scale(0.98); opacity: 0.85; }
+
+/* ══ Sichtungs-Liste ══ */
+#list-panel { position: fixed; inset: 0; z-index: 250; background: var(--bg);
+  overflow-y: auto; transform: translateX(100%); transition: transform .35s cubic-bezier(.25,.8,.25,1); }
+#list-panel.open { transform: translateX(0); }
+.lh { padding: 18px 20px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; background: var(--bg); z-index: 10; }
+.lh-title { font-family: var(--mono); font-size: 13px; color: var(--accent2); letter-spacing: .1em; }
+.sc { margin: 12px 16px; padding: 14px 16px; background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; }
+.sc-top { display: flex; justify-content: space-between; margin-bottom: 8px; align-items: center; }
+.sc-time { font-family: var(--mono); font-size: 11px; color: var(--text3); }
+.sc-mag  { font-family: var(--mono); font-size: 11px; color: var(--gold); }
+.sc-data { font-size: 12px; color: var(--text2); line-height: 1.9; }
+.del-btn { margin-top: 10px; float: right; padding: 5px 10px; border-radius: 6px;
+  background: rgba(255,107,107,0.08); border: 1px solid rgba(255,107,107,0.25);
+  color: var(--red); font-family: var(--mono); font-size: 10px; cursor: pointer; }
+.del-btn:hover { background: rgba(255,107,107,0.2); }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--text3); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<!-- Hintergrund -->
+<div id="sky"></div>
+<canvas id="canvas"></canvas>
+<div id="crosshair"><div class="ch-ring"></div></div>
+
+<!-- Top-Bar -->
+<div id="topbar">
+  <div class="logo">METEOR<span>LOG</span></div>
+  <div id="datetime"></div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="pill"><div class="dot off" id="s-dot"></div><span id="az-hud">AZ <b>—</b></span></div>
+  <div class="pill"><span id="el-hud">EL <b>—</b></span></div>
+  <div class="pill"><span id="gps-hud">GPS <b>—</b></span></div>
+  <div class="pill" onclick="toggleDebug()" style="cursor:pointer;color:var(--text3);">DBG</div>
+</div>
+
+<!-- Debug-Panel -->
+<div id="debug-panel" style="display:none;position:fixed;bottom:140px;left:0;right:0;z-index:160;
+  margin:0 12px;background:rgba(4,6,15,0.95);border:1px solid var(--border);border-radius:12px;
+  padding:14px 16px;font-family:var(--mono);font-size:11px;backdrop-filter:blur(12px);max-height:60vh;overflow-y:auto;">
+
+  <div style="display:flex;justify-content:space-between;margin-bottom:10px;align-items:center;">
+    <span style="color:var(--accent2);font-size:10px;letter-spacing:.1em;">SENSOR DEBUG</span>
+    <span id="dbg-mode" style="font-size:9px;padding:2px 8px;border-radius:10px;
+      background:rgba(79,142,255,0.12);color:var(--accent2);">—</span>
+  </div>
+
+  <!-- Berechnete Werte -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+    <div style="background:rgba(79,142,255,0.06);border-radius:8px;padding:8px 10px;">
+      <div style="color:var(--text3);font-size:9px;margin-bottom:3px;">AZIMUT</div>
+      <div style="color:var(--accent2);font-size:18px;" id="dbg-az">—</div>
+      <div style="color:var(--text3);font-size:9px;margin-top:2px;" id="dbg-az-dir">—</div>
+    </div>
+    <div style="background:rgba(78,207,138,0.06);border-radius:8px;padding:8px 10px;">
+      <div style="color:var(--text3);font-size:9px;margin-bottom:3px;">ELEVATION</div>
+      <div style="color:var(--green);font-size:18px;" id="dbg-el">—</div>
+      <div style="color:var(--text3);font-size:9px;margin-top:2px;" id="dbg-el-hint">—</div>
+    </div>
+  </div>
+
+  <!-- Kalibrierungsanleitung -->
+  <div style="border-top:1px solid var(--border);padding-top:10px;margin-bottom:10px;">
+    <div style="color:var(--text3);font-size:9px;letter-spacing:.08em;margin-bottom:6px;">KALIBRIERUNGSTEST</div>
+    <div id="dbg-test" style="color:var(--text2);font-size:11px;line-height:1.7;"></div>
+  </div>
+
+  <!-- Rohdaten -->
+  <div style="border-top:1px solid var(--border);padding-top:10px;">
+    <div style="color:var(--text3);font-size:9px;letter-spacing:.08em;margin-bottom:6px;">ROHDATEN</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;">
+      <div style="text-align:center;">
+        <div style="color:var(--text3);font-size:8px;">qW</div>
+        <div style="color:var(--text2);font-size:10px;" id="dbg-qw">—</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="color:var(--text3);font-size:8px;">qX</div>
+        <div style="color:var(--text2);font-size:10px;" id="dbg-qx">—</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="color:var(--text3);font-size:8px;">qY</div>
+        <div style="color:var(--text2);font-size:10px;" id="dbg-qy">—</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="color:var(--text3);font-size:8px;">qZ</div>
+        <div style="color:var(--text2);font-size:10px;" id="dbg-qz">—</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:6px;">
+      <div style="text-align:center;">
+        <div style="color:var(--text3);font-size:8px;">alpha °</div>
+        <div style="color:var(--text2);font-size:10px;" id="dbg-alpha">—</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="color:var(--text3);font-size:8px;">beta °</div>
+        <div style="color:var(--text2);font-size:10px;" id="dbg-beta">—</div>
+      </div>
+      <div style="text-align:center;">
+        <div style="color:var(--text3);font-size:8px;">gamma °</div>
+        <div style="color:var(--text2);font-size:10px;" id="dbg-gamma">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kalibrierungsstatus-Balken -->
+  <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:10px;">
+    <div style="color:var(--text3);font-size:9px;letter-spacing:.08em;margin-bottom:6px;">STABILITÄT (letzte 20 Werte)</div>
+    <div style="display:flex;gap:6px;">
+      <div style="flex:1;">
+        <div style="color:var(--text3);font-size:8px;">AZ Jitter</div>
+        <div style="height:4px;background:var(--bg2);border-radius:2px;margin-top:3px;">
+          <div id="dbg-jitter-az" style="height:4px;border-radius:2px;background:var(--accent);width:0%;transition:width .3s;"></div>
+        </div>
+      </div>
+      <div style="flex:1;">
+        <div style="color:var(--text3);font-size:8px;">EL Jitter</div>
+        <div style="height:4px;background:var(--bg2);border-radius:2px;margin-top:3px;">
+          <div id="dbg-jitter-el" style="height:4px;border-radius:2px;background:var(--green);width:0%;transition:width .3s;"></div>
+        </div>
+      </div>
+    </div>
+    <div style="color:var(--text3);font-size:9px;margin-top:4px;" id="dbg-jitter-txt">—</div>
+  </div>
+</div>
+
+<!-- Aufnahme -->
+<div id="rec-area">
+  <div id="rec-stats">
+    <span>Pkt: <b id="rp">0</b></span>
+    <span>Dauer: <b id="rd">0.0s</b></span>
+    <span>Bogen: <b id="ra">0°</b></span>
+    <span>v: <b id="rv">—</b></span>
+  </div>
+  <button id="rec-btn"></button>
+  <div id="rec-hint">gedrückt halten = Pfad aufnehmen</div>
+</div>
+
+<div id="toast"></div>
+<button id="list-btn" onclick="openList()">SICHTUNGEN ▸</button>
+
+<!-- Gerätehaltung Info-Button — unten links -->
+<button onclick="showHoldingInfo()" style="position:fixed;bottom:30px;left:20px;z-index:150;
+  background:rgba(8,13,26,0.85);border:1px solid var(--border);border-radius:20px;
+  padding:8px 14px;font-family:var(--mono);font-size:10px;color:var(--text2);cursor:pointer;
+  backdrop-filter:blur(8px);">? Haltung</button>
+
+<!-- Sensor-Warnung -->
+<div id="sensor-warn" style="display:none;position:fixed;inset:0;z-index:180;
+  background:rgba(4,6,15,0.88);align-items:center;justify-content:center;padding:24px;">
+  <div style="background:var(--bg2);border:1px solid rgba(255,107,107,0.5);border-radius:16px;
+    padding:24px;max-width:340px;width:100%;">
+    <div style="font-family:var(--mono);font-size:12px;color:var(--red);letter-spacing:.08em;margin-bottom:12px;">
+      ⚠ KEINE SENSOREN ERKANNT
+    </div>
+    <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:16px;">
+      Das Gyroskop/Kompass-Sensor ist nicht aktiv. Mögliche Ursachen:<br><br>
+      <b style="color:var(--text);">1. Datei lokal geöffnet (file://)</b><br>
+      Sensoren funktionieren nur über HTTPS. Lade die Datei auf einen Webserver (z.B. Netlify Drop).<br><br>
+      <b style="color:var(--text);">2. iOS — Berechtigung fehlt</b><br>
+      Einstellungen → Safari → Bewegung &amp; Ausrichtung → aktivieren.<br><br>
+      <b style="color:var(--text);">3. Desktop-Browser</b><br>
+      Auf dem Desktop läuft die Maus-Simulation. Für echte Messungen das Smartphone verwenden.
+    </div>
+    <button onclick="dismissSensorWarn()" style="width:100%;padding:12px;border-radius:10px;
+      background:var(--accent);border:none;color:white;font-family:var(--mono);font-size:13px;cursor:pointer;">
+      Verstanden
+    </button>
+  </div>
+</div>
+
+<!-- Gerätehaltung Info-Overlay -->
+<div id="holding-info" style="display:none;position:fixed;inset:0;z-index:180;
+  background:rgba(4,6,15,0.88);align-items:center;justify-content:center;padding:24px;">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;
+    padding:24px;max-width:340px;width:100%;">
+    <div style="font-family:var(--mono);font-size:12px;color:var(--accent2);letter-spacing:.08em;margin-bottom:16px;">
+      SO HÄLTST DU DAS GERÄT
+    </div>
+    <!-- Schematische Darstellung -->
+    <div style="display:flex;gap:20px;align-items:flex-start;margin-bottom:16px;">
+      <!-- Gerät-Zeichnung -->
+      <svg width="70" height="130" viewBox="0 0 70 130" style="flex-shrink:0;">
+        <!-- Smartphone-Körper -->
+        <rect x="15" y="10" width="40" height="80" rx="6" fill="none" stroke="rgba(126,179,255,0.5)" stroke-width="1.5"/>
+        <!-- Kamera oben -->
+        <circle cx="35" cy="16" r="2.5" fill="rgba(126,179,255,0.4)"/>
+        <!-- Bildschirm -->
+        <rect x="19" y="22" width="32" height="50" rx="2" fill="rgba(79,142,255,0.1)" stroke="rgba(79,142,255,0.2)" stroke-width="0.5"/>
+        <!-- Fadenkreuz auf Bildschirm -->
+        <line x1="35" y1="35" x2="35" y2="59" stroke="rgba(79,142,255,0.5)" stroke-width="0.8"/>
+        <line x1="23" y1="47" x2="47" y2="47" stroke="rgba(79,142,255,0.5)" stroke-width="0.8"/>
+        <circle cx="35" cy="47" r="4" fill="none" stroke="rgba(79,142,255,0.5)" stroke-width="0.8"/>
+        <!-- Pfeil nach oben (Richtung Himmel) -->
+        <line x1="35" y1="8" x2="35" y2="0" stroke="#4ecf8a" stroke-width="1.5" stroke-linecap="round"/>
+        <polyline points="31,4 35,0 39,4" fill="none" stroke="#4ecf8a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Hand-Andeutung unten -->
+        <path d="M20 95 Q25 92 35 93 Q45 92 50 95 L50 108 Q35 115 20 108 Z" fill="rgba(138,170,216,0.12)" stroke="rgba(138,170,216,0.25)" stroke-width="0.8"/>
+        <!-- Label "Kamera" -->
+        <text x="55" y="18" font-size="7" fill="rgba(138,170,216,0.55)" font-family="monospace">Kamera</text>
+        <line x1="37" y1="16" x2="53" y2="16" stroke="rgba(138,170,216,0.3)" stroke-width="0.5" stroke-dasharray="2 1"/>
+      </svg>
+      <div style="font-size:12px;color:var(--text2);line-height:1.8;">
+        <div style="color:var(--green);font-family:var(--mono);font-size:10px;margin-bottom:8px;">✓ RICHTIG</div>
+        Gerät <b style="color:var(--text);">hochkant</b> halten, Display zu dir — wie beim Fotografieren einer Person.<br><br>
+        Die <b style="color:var(--text);">Kamera-Rückseite</b> zeigt zum Meteor. Zum Horizont zielen = 0°, weiter nach hinten kippen = höher am Himmel.<br><br>
+        <b style="color:var(--text);">Taste halten</b> und dem Meteor-Weg langsam folgen — es zählt die Richtung, nicht das Tempo.
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);line-height:1.6;padding:10px;
+      background:rgba(79,142,255,0.06);border-radius:8px;margin-bottom:16px;font-family:var(--mono);">
+      AZ = Himmelsrichtung (0–360°)<br>
+      EL = Höhenwinkel über Horizont (0–90°)<br>
+      GPS = nur dein Standort, nicht der Pfad
+    </div>
+    <button onclick="dismissHoldingInfo()" style="width:100%;padding:12px;border-radius:10px;
+      background:var(--accent);border:none;color:white;font-family:var(--mono);font-size:13px;cursor:pointer;">
+      Verstanden
+    </button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     EIGENSCHAFTEN-PANEL
+══════════════════════════════════════ -->
+<div id="props-panel">
+
+  <!-- ① scrollbarer Bereich mit allen Einstellungen -->
+  <div id="pp-scroll">
+
+    <div class="ph">
+      <div class="ph-title">// SICHTUNG BESCHREIBEN</div>
+      <button class="x-btn" onclick="closeProps()">✕</button>
+    </div>
+
+    <!-- Pfad -->
+    <div class="sec">
+      <div class="lbl">Aufgezeichneter Pfad</div>
+      <div id="path-wrap">
+        <div>
+          <canvas id="path-compass" width="150" height="150" style="display:block;border-radius:6px;"></canvas>
+        </div>
+        <div class="path-meta" id="path-meta">—</div>
+      </div>
+    </div>
+
+    <!-- Helligkeit -->
+    <div class="sec">
+      <div class="lbl">Helligkeit — wie hell war der Meteor?</div>
+      <div class="speed-row">
+        <input type="range" id="mag-sl" min="0" max="5" value="3" step="1" oninput="setMag(this.value)">
+      </div>
+      <div class="mag-anchor" id="mag-anchor">So hell wie die Sterne des Großen Wagens</div>
+      <div class="meta-txt" id="mag-hint">mittelheller Meteor · Magnitude ≈ +2</div>
+    </div>
+
+    <!-- Geschwindigkeit -->
+    <div class="sec">
+      <div class="lbl">Geschwindigkeit — IMO-Pflichtfeld</div>
+      <div class="speed-row">
+        <input type="range" id="speed-sl" min="1" max="40" value="15" step="1" oninput="setSpeed(this.value)">
+        <span class="speed-val" id="speed-val">15 °/s</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:5px;">
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">Langsam</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--accent2);font-weight:500" id="speed-cls">Mittel</span>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--text3)">Sehr schnell</span>
+      </div>
+      <div class="meta-txt" id="speed-hint"></div>
+    </div>
+
+    <!-- Farbe -->
+    <div class="sec">
+      <div class="lbl">Farbe <span class="lbl-hint" id="col-hint">(auffälligste zuerst antippen)</span></div>
+      <div id="col-locked" style="display:none;font-family:var(--mono);font-size:11px;color:var(--text3);padding-bottom:6px;">Zu schwach für Farbwahrnehmung</div>
+      <div class="chips" id="col-chips">
+        <div class="chip" data-g="col" data-v="white" onclick="pickCol(this)">
+          <svg width="44" height="36" viewBox="0 0 44 36"><circle cx="22" cy="18" r="10" fill="rgba(240,240,255,0.1)" stroke="rgba(240,240,255,0.4)" stroke-width="1"/><circle cx="22" cy="18" r="5" fill="rgba(240,240,255,0.5)"/></svg>
+          <span class="chip-lbl">Weiß</span>
+        </div>
+        <div class="chip" data-g="col" data-v="yellow" onclick="pickCol(this)">
+          <svg width="44" height="36" viewBox="0 0 44 36"><circle cx="22" cy="18" r="10" fill="rgba(240,184,64,0.15)" stroke="rgba(240,184,64,0.4)" stroke-width="1"/><circle cx="22" cy="18" r="5" fill="#f0b840" opacity="0.6"/></svg>
+          <span class="chip-lbl">Gelb</span>
+        </div>
+        <div class="chip on" data-g="col" data-v="orange" onclick="pickCol(this)">
+          <svg width="44" height="36" viewBox="0 0 44 36"><circle cx="22" cy="18" r="10" fill="rgba(255,140,60,0.15)" stroke="rgba(255,140,60,0.4)" stroke-width="1"/><circle cx="22" cy="18" r="5" fill="#ff8c3c" opacity="0.7"/></svg>
+          <span class="chip-lbl">Orange</span>
+        </div>
+        <div class="chip" data-g="col" data-v="red" onclick="pickCol(this)">
+          <svg width="44" height="36" viewBox="0 0 44 36"><circle cx="22" cy="18" r="10" fill="rgba(255,100,100,0.15)" stroke="rgba(255,100,100,0.4)" stroke-width="1"/><circle cx="22" cy="18" r="5" fill="#ff6464" opacity="0.7"/></svg>
+          <span class="chip-lbl">Rot</span>
+        </div>
+        <div class="chip" data-g="col" data-v="blue" onclick="pickCol(this)">
+          <svg width="44" height="36" viewBox="0 0 44 36"><circle cx="22" cy="18" r="10" fill="rgba(80,160,255,0.15)" stroke="rgba(80,160,255,0.4)" stroke-width="1"/><circle cx="22" cy="18" r="5" fill="#50a0ff" opacity="0.7"/></svg>
+          <span class="chip-lbl">Blau</span>
+        </div>
+        <div class="chip" data-g="col" data-v="green" onclick="pickCol(this)">
+          <svg width="44" height="36" viewBox="0 0 44 36"><circle cx="22" cy="18" r="10" fill="rgba(78,207,138,0.15)" stroke="rgba(78,207,138,0.4)" stroke-width="1"/><circle cx="22" cy="18" r="5" fill="#4ecf8a" opacity="0.7"/></svg>
+          <span class="chip-lbl">Grün</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Schauer (IMO-Kürzel) -->
+    <div class="sec">
+      <div class="lbl">Meteorschauer (IMO-Kürzel)</div>
+      <div class="chips" style="gap:6px;" id="shower-chips">
+        <div class="chip shower-chip" data-g="shower" data-v="PER" onclick="pick(this)"><span class="chip-lbl">Perseiden (PER) Aug.</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="GEM" onclick="pick(this)"><span class="chip-lbl">Geminiden (GEM) Dez.</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="LEO" onclick="pick(this)"><span class="chip-lbl">Leoniden (LEO) Nov.</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="ETA" onclick="pick(this)"><span class="chip-lbl">η-Aquariiden (ETA) Mai</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="ORI" onclick="pick(this)"><span class="chip-lbl">Orioniden (ORI) Okt.</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="QUA" onclick="pick(this)"><span class="chip-lbl">Quadrantiden (QUA) Jan.</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="DRA" onclick="pick(this)"><span class="chip-lbl">Drakoniden (DRA) Okt.</span></div>
+        <div class="chip shower-chip" data-g="shower" data-v="SPO" onclick="pick(this)"><span class="chip-lbl">Sporadisch (SPO)</span></div>
+      </div>
+    </div>
+
+    <!-- Aufklappbarer Detail-Bereich -->
+    <div class="details-toggle" id="details-toggle" onclick="toggleDetails()">
+      <span>Mehr Details</span>
+      <span class="arrow">▶</span>
+    </div>
+    <div id="details-body">
+
+    <!-- Trail / Wake -->
+    <div class="sec">
+      <div class="lbl">Nachleucht-Erscheinung (Wake / Train)</div>
+      <div class="chips" id="trail-chips">
+        <div class="chip" data-g="trail" data-v="none" onclick="pick(this)">
+          <svg width="56" height="32" viewBox="0 0 56 32"><circle cx="28" cy="16" r="4" fill="rgba(200,216,248,0.4)"/></svg>
+          <span class="chip-lbl">Kein</span>
+        </div>
+        <div class="chip" data-g="trail" data-v="wake" onclick="pick(this)">
+          <svg width="56" height="32" viewBox="0 0 56 32">
+            <line x1="10" y1="16" x2="36" y2="16" stroke="rgba(200,216,248,0.2)" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="40" cy="16" r="4" fill="rgba(240,184,64,0.7)"/>
+          </svg>
+          <span class="chip-lbl">Wake<br>(kurz)</span>
+        </div>
+        <div class="chip on" data-g="trail" data-v="train_short" onclick="pick(this)">
+          <svg width="56" height="32" viewBox="0 0 56 32">
+            <line x1="6"  y1="18" x2="40" y2="14" stroke="rgba(200,216,248,0.13)" stroke-width="4" stroke-linecap="round"/>
+            <line x1="14" y1="17" x2="42" y2="14" stroke="rgba(200,216,248,0.28)" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="44" cy="14" r="4.5" fill="rgba(240,184,64,0.75)"/>
+          </svg>
+          <span class="chip-lbl">Train<br>&lt; 1s</span>
+        </div>
+        <div class="chip" data-g="trail" data-v="train_persist" onclick="pick(this)">
+          <svg width="56" height="32" viewBox="0 0 56 32">
+            <path d="M4 24 Q22 8 44 12" fill="none" stroke="rgba(200,216,248,0.28)" stroke-width="2.5" stroke-dasharray="4 2"/>
+            <circle cx="46" cy="12" r="4.5" fill="rgba(240,184,64,0.8)"/>
+          </svg>
+          <span class="chip-lbl">Train<br>1–10s</span>
+        </div>
+        <div class="chip" data-g="trail" data-v="train_long" onclick="pick(this)">
+          <svg width="56" height="32" viewBox="0 0 56 32">
+            <path d="M2 24 Q20 8 44 12" fill="none" stroke="rgba(200,216,248,0.32)" stroke-width="2" stroke-dasharray="5 2"/>
+            <path d="M2 22 Q20 7 44 11" fill="none" stroke="rgba(200,216,248,0.12)" stroke-width="5"/>
+            <circle cx="46" cy="12" r="4.5" fill="rgba(240,184,64,0.85)"/>
+          </svg>
+          <span class="chip-lbl">Train<br>&gt;10s</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Helligkeitsverlauf -->
+    <div class="sec">
+      <div class="lbl">Helligkeitsverlauf</div>
+      <div class="chips" id="light-chips">
+        <div class="chip" data-g="light" data-v="steady" onclick="pick(this)">
+          <svg width="56" height="32" viewBox="0 0 56 32"><line x1="4" y1="16" x2="52" y2="16" stroke="rgba(200,216,248,0.48)" stroke-width="2.5" stroke-linecap="round"/><circle cx="52" cy="16" r="4" fill="rgba(240,184,64,0.7)"/></svg>
+          <span class="chip-lbl">Gleich-<br>mäßig</span>
+        </div>
+        <div class="chip" data-g="light" data-v="brightening" onclick="pick(this)">
+          <svg width="56" height="32" viewBox="0 0 56 32"><line x1="4" y1="22" x2="52" y2="10" stroke="rgba(200,216,248,0.48)" stroke-width="2.5" stroke-linecap="round"/><circle cx="52" cy="10" r="5" fill="rgba(240,184,64,0.8)"/></svg>
+          <span class="chip-lbl">Heller<br>werdend</span>
+        </div>
+        <div class="chip" data-g="light" data-v="flicker" onclick="pick(this)">
+          <svg width="56" height="32" viewBox="0 0 56 32"><polyline points="4,16 11,9 18,21 25,8 32,19 39,10 48,16" fill="none" stroke="rgba(240,184,64,0.6)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><circle cx="50" cy="16" r="4" fill="rgba(240,184,64,0.7)"/></svg>
+          <span class="chip-lbl">Flackernd</span>
+        </div>
+        <div class="chip" data-g="light" data-v="terminal_burst" onclick="pick(this)">
+          <svg width="56" height="32" viewBox="0 0 56 32"><line x1="4" y1="16" x2="26" y2="16" stroke="rgba(200,216,248,0.28)" stroke-width="1.5" stroke-linecap="round"/><circle cx="36" cy="16" r="12" fill="rgba(240,184,64,0.06)" stroke="rgba(240,184,64,0.22)" stroke-width="0.5"/><circle cx="36" cy="16" r="7" fill="rgba(240,184,64,0.15)"/><circle cx="36" cy="16" r="4" fill="#f0b840" opacity="0.75"/></svg>
+          <span class="chip-lbl">Terminal-<br>blitz</span>
+        </div>
+        <div class="chip" data-g="light" data-v="fragmented" onclick="pick(this)">
+          <svg width="56" height="32" viewBox="0 0 56 32"><circle cx="12" cy="20" r="3" fill="rgba(200,216,248,0.28)"/><circle cx="24" cy="15" r="3.5" fill="rgba(200,216,248,0.42)"/><circle cx="36" cy="11" r="5" fill="rgba(240,184,64,0.65)"/><circle cx="50" cy="8" r="2.5" fill="rgba(200,216,248,0.22)"/></svg>
+          <span class="chip-lbl">Zerfällt<br>(Bolide)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Ton -->
+    <div class="sec">
+      <div class="lbl">Ton wahrgenommen?</div>
+      <div class="chips" id="sound-chips">
+        <div class="chip on" data-g="sound" data-v="none" onclick="pick(this)">
+          <svg width="44" height="36" viewBox="0 0 44 36"><line x1="14" y1="14" x2="30" y2="22" stroke="rgba(100,136,184,0.42)" stroke-width="1.5" stroke-linecap="round"/><line x1="30" y1="14" x2="14" y2="22" stroke="rgba(100,136,184,0.42)" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span class="chip-lbl">Keiner</span>
+        </div>
+        <div class="chip" data-g="sound" data-v="electro" onclick="pick(this)">
+          <svg width="44" height="36" viewBox="0 0 44 36"><path d="M18 22 Q22 12 26 22" fill="none" stroke="rgba(200,216,248,0.42)" stroke-width="1.5"/><path d="M14 24 Q22 8 30 24" fill="none" stroke="rgba(200,216,248,0.28)" stroke-width="1"/><path d="M10 26 Q22 4 34 26" fill="none" stroke="rgba(200,216,248,0.16)" stroke-width="0.8"/></svg>
+          <span class="chip-lbl">Elektro-<br>phon</span>
+        </div>
+        <div class="chip" data-g="sound" data-v="boom" onclick="pick(this)">
+          <svg width="44" height="36" viewBox="0 0 44 36"><polygon points="10,22 10,14 17,18" fill="rgba(200,216,248,0.52)"/><path d="M21 13 Q28 18 21 23" fill="none" stroke="rgba(200,216,248,0.42)" stroke-width="1.5"/><path d="M25 10 Q35 18 25 26" fill="none" stroke="rgba(200,216,248,0.28)" stroke-width="1.2"/></svg>
+          <span class="chip-lbl">Knall<br>(Boom)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Grenzgröße -->
+    <div class="sec">
+      <div class="lbl">Himmelsdunkelheit — wieviele Sterne siehst du?</div>
+      <canvas id="lm-cv" style="width:100%;height:68px;display:block;border-radius:6px;margin-bottom:10px;"></canvas>
+      <div class="lm-row" id="lm-chips">
+        <div class="lm-chip"    data-v="3"   onclick="pickLm(this)">+3</div>
+        <div class="lm-chip"    data-v="4"   onclick="pickLm(this)">+4</div>
+        <div class="lm-chip on" data-v="5"   onclick="pickLm(this)">+5</div>
+        <div class="lm-chip"    data-v="6"   onclick="pickLm(this)">+6</div>
+        <div class="lm-chip"    data-v="6.5" onclick="pickLm(this)">+6,5</div>
+        <div class="lm-chip"    data-v="7"   onclick="pickLm(this)">+7</div>
+      </div>
+      <div class="meta-txt" id="lm-hint">Normaler Landhimmel — Milchstraße andeutungsweise</div>
+    </div>
+
+    <!-- Notiz -->
+    <div class="sec-last">
+      <div class="lbl">Notiz / Besonderheiten</div>
+      <textarea id="notes" rows="5" placeholder="Besonderheiten: Fragmentierung, Farbwechsel, Feuerkugel, Geräusch …"></textarea>
+    </div>
+
+    </div><!-- Ende #details-body -->
+
+  </div><!-- Ende #pp-scroll -->
+
+  <!-- ② Fixer Footer: Animation + Speichern -->
+  <div id="pp-footer">
+    <div style="position:relative;">
+      <canvas id="preview-canvas" style="width:100%;height:72px;display:block;background:#020408;"></canvas>
+      <div style="position:absolute;top:50%;right:10px;transform:translateY(-50%);
+                  font-family:var(--mono);font-size:9px;color:rgba(138,170,216,0.4);
+                  pointer-events:none;line-height:1.7;text-align:right;" id="preview-label"></div>
+    </div>
+    <div id="preview-info"></div>
+    <button id="save-btn" onclick="saveSighting()">SICHTUNG SPEICHERN</button>
+  </div>
+
+</div><!-- Ende #props-panel -->
+
+<!-- ══════════════════════════════════════
+     SICHTUNGS-LISTE
+══════════════════════════════════════ -->
+<div id="list-panel">
+  <div class="lh">
+    <div class="lh-title">// MEINE SICHTUNGEN</div>
+    <button class="x-btn" onclick="closeList()">✕</button>
+  </div>
+  <div id="list-content" style="padding-bottom:40px;"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+const S = {
+  az: 180, el: 45,
+  recording: false, path: [], recStart: null,
+  sensorActive: false, location: null,
+  sightings: [],
+  p: { mag:'2', col:['orange'], trail:'train_short', light:null, sound:'none', shower:null, speed:15, lm:'5' }
+};
+
+// ══════════════════════════════════════════
+// STERNE
+// ══════════════════════════════════════════
+(function(){
+  const sky = document.getElementById('sky');
+  for (let i = 0; i < 300; i++) {
+    const el = document.createElement('div');
+    el.className = 'star';
+    const sz = Math.random() < 0.05 ? 2.4 : Math.random() < 0.2 ? 1.7 : 1;
+    const op = 0.2 + Math.random() * 0.7;
+    el.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*85}%;width:${sz}px;height:${sz}px;opacity:${op};--o:${op};`;
+    if (Math.random() < 0.4) {
+      el.classList.add('t');
+      el.style.setProperty('--d', (2 + Math.random()*4) + 's');
+      el.style.setProperty('--dl', (-Math.random()*4) + 's');
+    }
+    sky.appendChild(el);
+  }
+})();
+
+// ══════════════════════════════════════════
+// CANVAS + RESIZE
+// ══════════════════════════════════════════
+const cv = document.getElementById('canvas');
+const cx = cv.getContext('2d');
+function resize() { cv.width = innerWidth; cv.height = innerHeight; }
+resize(); addEventListener('resize', resize);
+
+// ══════════════════════════════════════════
+// UHR
+// ══════════════════════════════════════════
+function tick() {
+  const n = new Date();
+  document.getElementById('datetime').innerHTML =
+    n.toLocaleDateString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric'}) + '<br>' +
+    n.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
+setInterval(tick, 1000); tick();
+
+// ══════════════════════════════════════════
+// GPS
+// ══════════════════════════════════════════
+navigator.geolocation && navigator.geolocation.getCurrentPosition(
+  p => { S.location = {lat:p.coords.latitude, lng:p.coords.longitude};
+         document.getElementById('gps-hud').innerHTML = `GPS <b>${p.coords.latitude.toFixed(2)}°N</b>`; },
+  ()=> document.getElementById('gps-hud').innerHTML = 'GPS <b>keine</b>'
+);
+
+// ══════════════════════════════════════════
+// ══════════════════════════════════════════
+// SENSOREN — Quaternion (kein Gimbal Lock)
+// AbsoluteOrientationSensor mit referenceFrame:'device'
+// VERIFIZIERT (Pixel 7 Pro, Kompass-Abgleich):
+// Blickrichtung = Geräte-Längsachse [0,1,0] (Kamera-Oberkante)
+// via Rotationsmatrix. AZ = atan2(wz,wx)-180°, EL = asin(wy)
+// Haltung: hochkant, Objektiv zeigt zum Ziel (wie Barbie aufrecht nach Norden)
+// ══════════════════════════════════════════
+
+// ── Debug ──
+let dbgVisible = false;
+let dbgHistory = { az:[], el:[] };
+let dbgRaw = { qw:0, qx:0, qy:0, qz:0, alpha:0, beta:0, gamma:0 };
+let dbgMode = '—';
+
+function toggleDebug() {
+  dbgVisible = !dbgVisible;
+  document.getElementById('debug-panel').style.display = dbgVisible ? 'block' : 'none';
+}
+
+function updateDebug() {
+  if (!dbgVisible) return;
+  const dirs = ['N','NNO','NO','ONO','O','OSO','SO','SSO','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  const dir = dirs[Math.round(S.az/22.5)%16];
+  let elHint = S.el < 5 ? 'Kamera zum Horizont' : S.el < 20 ? 'Flach nach oben' : S.el < 50 ? 'Schräg nach oben' : S.el < 80 ? 'Steil nach oben' : 'Fast senkrecht';
+  document.getElementById('dbg-az').textContent      = S.az.toFixed(1) + '°';
+  document.getElementById('dbg-az-dir').textContent  = dir;
+  document.getElementById('dbg-el').textContent      = S.el.toFixed(1) + '°';
+  document.getElementById('dbg-el-hint').textContent = elHint;
+  document.getElementById('dbg-mode').textContent    = dbgMode;
+  document.getElementById('dbg-qw').textContent      = dbgRaw.qw.toFixed(3);
+  document.getElementById('dbg-qx').textContent      = dbgRaw.qx.toFixed(3);
+  document.getElementById('dbg-qy').textContent      = dbgRaw.qy.toFixed(3);
+  document.getElementById('dbg-qz').textContent      = dbgRaw.qz.toFixed(3);
+  document.getElementById('dbg-alpha').textContent   = dbgRaw.alpha.toFixed(1);
+  document.getElementById('dbg-beta').textContent    = dbgRaw.beta.toFixed(1);
+  document.getElementById('dbg-gamma').textContent   = dbgRaw.gamma.toFixed(1);
+  dbgHistory.az.push(S.az); dbgHistory.el.push(S.el);
+  if (dbgHistory.az.length > 20) { dbgHistory.az.shift(); dbgHistory.el.shift(); }
+  if (dbgHistory.az.length > 2) {
+    const jAz = Math.max(...dbgHistory.az) - Math.min(...dbgHistory.az);
+    const jEl = Math.max(...dbgHistory.el) - Math.min(...dbgHistory.el);
+    document.getElementById('dbg-jitter-az').style.width = Math.min(100,jAz*5)+'%';
+    document.getElementById('dbg-jitter-el').style.width = Math.min(100,jEl*5)+'%';
+    document.getElementById('dbg-jitter-az').style.background = jAz<2?'#4ecf8a':jAz<10?'#f0b840':'#ff6b6b';
+    document.getElementById('dbg-jitter-el').style.background = jEl<2?'#4ecf8a':jEl<10?'#f0b840':'#ff6b6b';
+    document.getElementById('dbg-jitter-txt').textContent = `AZ ±${jAz.toFixed(1)}°  EL ±${jEl.toFixed(1)}°  ${(jAz<2&&jEl<2)?'✓ Gut':'~ Mäßig'}`;
+  }
+  let test = '';
+  if (S.az < 15 || S.az > 345) test = 'Zeigt Nord → AZ ~0° ✓';
+  else if (S.az > 80 && S.az < 100) test = 'Zeigt Ost → AZ ~90° ✓';
+  else if (S.az > 170 && S.az < 190) test = 'Zeigt Süd → AZ ~180° ✓';
+  else if (S.az > 260 && S.az < 280) test = 'Zeigt West → AZ ~270° ✓';
+  else if (S.el < 3) test = 'Kamera nach oben kippen → EL sollte steigen';
+  else if (S.el > 85) test = 'Kamera zeigt senkrecht nach oben → EL ~90° ✓';
+  else test = `AZ=${S.az.toFixed(0)}° EL=${S.el.toFixed(0)}° · qW=${dbgRaw.qw.toFixed(2)}`;
+  document.getElementById('dbg-test').textContent = test;
+}
+
+// ══════════════════════════════════════════
+// V3.1 — iOS-Kompass-Ergänzungen + gemeinsame Live-Glättung
+// ══════════════════════════════════════════
+
+// ── Magnetische Deklination — global, gewichtete Nachbar-Interpolation ──
+// webkitCompassHeading liefert magnetisch Nord (Apple-Doku), nicht geografisch Nord.
+// 32 echte WMM-Referenzwerte 2025/26 (Quelle: magnetic-declination.com), Europa
+// deutlich dichter abgedeckt (13 Punkte) als der Rest der Welt (~2–5 je Kontinent).
+// Je 5 nächstgelegene Referenzpunkte werden invers-quadratisch nach Entfernung
+// gewichtet gemittelt — degradiert weich statt hart abzuschneiden, ist aber in
+// dünn abgedeckten Zonen (Ozeane, Polnähe, wenige Nachbarn) entsprechend gröber.
+const DECL_TABLE = [
+  // [lat, lon, Deklination°, Name]
+  [ 50.735,   7.10,   3.22, 'Bonn'],
+  [ 50.938,   6.96,   3.16, 'Köln'],
+  [ 52.520,  13.41,   4.35, 'Berlin'],
+  [ 48.137,  11.58,   4.30, 'München'],
+  [ 51.507,  -0.13,   1.14, 'London'],
+  [ 48.857,   2.35,   2.92, 'Paris'],
+  [ 40.417,  -3.70,   0.56, 'Madrid'],
+  [ 41.903,  12.50,   4.03, 'Rom'],
+  [ 52.230,  21.01,   7.02, 'Warschau'],
+  [ 59.329,  18.07,   6.47, 'Stockholm'],
+  [ 59.914,  10.75,   4.89, 'Oslo'],
+  [ 64.146, -21.94, -11.37, 'Reykjavik'],
+  [ 55.756,  37.62,  12.02, 'Moskau'],
+  [ 40.713, -74.01,  -3.50, 'New York'],
+  [ 34.052,-118.24,  11.35, 'Los Angeles'],
+  [ 61.218,-149.90,  14.10, 'Anchorage'],
+  [ 43.653, -79.38, -10.14, 'Toronto'],
+  [ 19.433, -99.13,   3.92, 'Mexico City'],
+  [-23.550, -46.63, -22.90, 'São Paulo'],
+  [-34.603, -58.38,  -9.91, 'Buenos Aires'],
+  [-33.447, -70.67,   0.23, 'Santiago'],
+  [ 30.044,  31.24,   4.75, 'Kairo'],
+  [-33.925,  18.42, -26.68, 'Kapstadt'],
+  [ -1.286,  36.82,   0.31, 'Nairobi'],
+  [ 39.904, 116.41,  -9.25, 'Peking'],
+  [ 35.676, 139.65,  -7.89, 'Tokio'],
+  [ 19.076,  72.88,  -0.03, 'Mumbai'],
+  [ 25.205,  55.27,   2.25, 'Dubai'],
+  [ 28.614,  77.21,   1.32, 'Neu-Delhi'],
+  [-33.868, 151.21,  12.83, 'Sydney'],
+  [-31.953, 115.86,  -1.50, 'Perth'],
+  [-36.849, 174.76,  20.32, 'Auckland'],
+];
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371, toRad = Math.PI / 180;
+  const dLat = (lat2 - lat1) * toRad, dLon = (lon2 - lon1) * toRad;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*toRad)*Math.cos(lat2*toRad)*Math.sin(dLon/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+function magneticDeclination(lat, lon) {
+  const withDist = DECL_TABLE.map(p => ({ d: haversineKm(lat, lon, p[0], p[1]), decl: p[2] }));
+  withDist.sort((a, b) => a.d - b.d);
+  const nearest = withDist.slice(0, 5);
+  let wSum = 0, vSum = 0;
+  nearest.forEach(p => { const w = 1 / (p.d * p.d + 1); wSum += w; vSum += w * p.decl; });
+  return vSum / wSum;
+}
+
+// ── iOS-Kompasskalibrierung ──
+// webkitCompassAccuracy: negativ = ungültig, hohe Werte (>15°) = schlecht kalibriert.
+let lastCalibWarn = 0;
+function checkCompassAccuracy(acc) {
+  if (acc === undefined || acc === null) return;
+  if ((acc < 0 || acc > 15) && Date.now() - lastCalibWarn > 15000) {
+    lastCalibWarn = Date.now();
+    showToast('Kompass unsicher — Handy kurz in einer 8 bewegen');
+  }
+}
+
+// ── Gemeinsame Live-Glättung (zirkulär, sin/cos-basiert) ──
+// Läuft für BEIDE Plattformen (Android-Quaternion und iOS/Fallback-Euler) an der
+// gemeinsamen "letzter Schritt vor der Anzeige"-Stelle. Ersetzt die direkte
+// S.az/S.el-Zuweisung, rührt aber nichts an der jeweiligen Sensor-Berechnung selbst an.
+// Eigenständig von der Pfad-Glättung in addPt() (die nur während der Aufnahme läuft).
+let smAzX = null, smAzY = null, smEl = null;
+const HUD_SMOOTH = 0.3; // 0..1, kleiner = glatter/träger
+function setOrientation(az, el) {
+  const rad = az * Math.PI / 180;
+  if (smAzX === null) {
+    smAzX = Math.cos(rad); smAzY = Math.sin(rad); smEl = el;
+  } else {
+    smAzX += (Math.cos(rad) - smAzX) * HUD_SMOOTH;
+    smAzY += (Math.sin(rad) - smAzY) * HUD_SMOOTH;
+    smEl  += (el - smEl) * HUD_SMOOTH;
+  }
+  S.az = ((Math.atan2(smAzY, smAzX) * 180 / Math.PI) + 360) % 360;
+  S.el = Math.max(0, Math.min(90, smEl));
+  updateHUD();
+}
+
+function initSensors() {
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    S.needsIosPermission = true;
+    return;
+  }
+  startSensors();
+}
+
+function startSensors() {
+  // Primär: AbsoluteOrientationSensor (Quaternion, kein Gimbal Lock)
+  if (typeof AbsoluteOrientationSensor !== 'undefined') {
+    try {
+      Promise.all([
+        navigator.permissions.query({name:'accelerometer'}),
+        navigator.permissions.query({name:'gyroscope'}),
+        navigator.permissions.query({name:'magnetometer'})
+      ]).then(results => {
+        if (results.every(r => r.state !== 'denied')) {
+          const sensor = new AbsoluteOrientationSensor({
+            frequency: 30,
+            referenceFrame: 'device'
+          });
+          sensor.addEventListener('reading', () => {
+            dbgMode = 'AbsOriSensor(device)';
+            updateFromQuat(sensor.quaternion);
+          });
+          sensor.addEventListener('error', e => {
+            console.warn('AbsOriSensor error:', e);
+            startDeviceOrientation();
+          });
+          sensor.start();
+        } else {
+          startDeviceOrientation();
+        }
+      }).catch(() => startDeviceOrientation());
+    } catch(e) { startDeviceOrientation(); }
+  } else {
+    startDeviceOrientation();
+  }
+}
+
+// Fallback: DeviceOrientationEvent
+function startDeviceOrientation() {
+  window.addEventListener('deviceorientationabsolute', handleOri, true);
+  setTimeout(() => {
+    if (!S.sensorActive) window.addEventListener('deviceorientation', handleOri, true);
+  }, 2000);
+}
+
+function handleOri(e) {
+  if (e.alpha === null || e.alpha === undefined) return;
+  const alpha = e.alpha || 0;
+  const beta  = e.beta  || 0;
+  const gamma = e.gamma || 0;
+  dbgRaw.alpha = alpha; dbgRaw.beta = beta; dbgRaw.gamma = gamma;
+
+  let az;
+  if (e.webkitCompassHeading !== undefined) {
+    // iOS: webkitCompassHeading ist auf magnetisch Nord bezogen (Apple-Doku).
+    // Mit Deklinationskorrektur (falls GPS vorhanden) auf geografisch Nord genähert.
+    let heading = e.webkitCompassHeading;
+    if (S.location) heading += magneticDeclination(S.location.lat, S.location.lng);
+    az = ((heading % 360) + 360) % 360;
+    dbgMode = 'iOS Kompass (webkitCompassHeading)';
+    checkCompassAccuracy(e.webkitCompassAccuracy);
+  } else {
+    // Fallback ohne Kompass-Referenz (z.B. Firefox/Android) — Gimbal Lock möglich bei hoher EL
+    az = (alpha + 90 + 360) % 360;
+    dbgMode = e.type === 'deviceorientationabsolute' ? 'DevOriAbs(fallback)' : 'DevOri(rel)';
+  }
+  const el = beta - 90;
+
+  setOrientation(az, el);
+  S.sensorActive = true;
+  document.getElementById('s-dot').classList.remove('off');
+  dbgRaw.qw=0; dbgRaw.qx=0; dbgRaw.qy=0; dbgRaw.qz=0;
+  updateDebug();
+  if (S.recording) { addPt(); drawPath(); }
+}
+
+function updateFromQuat(q) {
+  dbgRaw.qw=q[0]; dbgRaw.qx=q[1]; dbgRaw.qy=q[2]; dbgRaw.qz=q[3];
+
+  // Rotationsmatrix aus Quaternion (Gerät → Welt)
+  const w=q[0], x=q[1], y=q[2], z=q[3];
+  const R = [
+    [1-2*(y*y+z*z), 2*(x*y-w*z),   2*(x*z+w*y)],
+    [2*(x*y+w*z),   1-2*(x*x+z*z), 2*(y*z-w*x)],
+    [2*(x*z-w*y),   2*(y*z+w*x),   1-2*(x*x+y*y)]
+  ];
+
+  // Blickrichtung = Geräte-Längsachse [0,1,0] (Kamera-Oberkante)
+  // = zweite Spalte der Rotationsmatrix
+  const bx = R[0][1], by = R[1][1], bz = R[2][1];
+
+  // VERIFIZIERT (Pixel 7 Pro, Kompass-Abgleich über alle Richtungen):
+  // AZ = atan2(wz, wx) - 180°  (Nord=0°, Ost=90°, Süd=180°, West=270°)
+  // EL = asin(wy)              (Horizont=0°, Zenit=90°)
+  const az = ((Math.atan2(bz, bx) * 180 / Math.PI) - 180 + 720) % 360;
+  const el = Math.asin(Math.max(-1, Math.min(1, by))) * 180 / Math.PI;
+
+  setOrientation(az, el);
+  S.sensorActive = true;
+  document.getElementById('s-dot').classList.remove('off');
+  dbgRaw.alpha=0; dbgRaw.beta=0; dbgRaw.gamma=0;
+  updateDebug();
+  if (S.recording) { addPt(); drawPath(); }
+}
+initSensors();
+
+// ══════════════════════════════════════════
+// HUD / ANZEIGE
+// ══════════════════════════════════════════
+function updateHUD() {
+  document.getElementById('az-hud').innerHTML = `AZ <b>${S.az.toFixed(1)}°</b>`;
+  document.getElementById('el-hud').innerHTML = `EL <b>${S.el.toFixed(1)}°</b>`;
+}
+
+// ══════════════════════════════════════════
+// PFAD-AUFNAHME
+// ══════════════════════════════════════════
+function addPt() {
+ // Beruhigungszeit: erste 0.3s nach Druck verwerfen (Finger-Ruck)
+  if ((Date.now()-S.recStart)/1000 < 0.3) return;
+  // Glättung: neuer Punkt gemittelt mit den letzten Werten (dämpft Zittern)
+  let az=S.az, el=S.el;
+  const n=S.path.length;
+  if (n>0) {
+    const prev=S.path[n-1];
+    // Azimut sauber über 0°/360°-Grenze mitteln
+    let d=az-prev.az;
+    if (d>180) d-=360; if (d<-180) d+=360;
+    az=prev.az + d*0.4;   // 0.4 = Glättungsstärke (kleiner = glatter)
+    if (az<0) az+=360; if (az>=360) az-=360;
+    el=prev.el + (el-prev.el)*0.4;
+  }
+  S.path.push({ az, el, t:(Date.now()-S.recStart)/1000 });
+  updateRecStats();
+}  
+function calcArc() {
+  if (S.path.length < 2) return 0;
+  const a = S.path[0], b = S.path[S.path.length-1];
+  const da = Math.min(Math.abs(b.az-a.az), 360-Math.abs(b.az-a.az));
+  return Math.hypot(da, b.el-a.el);
+}
+function updateRecStats() {
+  const n = S.path.length, dur = n ? S.path[n-1].t.toFixed(1) : '0.0';
+  const arc = calcArc().toFixed(1);
+  const vel = parseFloat(dur) > 0.1 ? (calcArc()/parseFloat(dur)).toFixed(1) : '—';
+  if (vel !== '—') { S.p.speed = Math.min(40, Math.round(parseFloat(vel))); document.getElementById('speed-sl').value = S.p.speed; setSpeed(S.p.speed, false); }
+  document.getElementById('rp').textContent = n;
+  document.getElementById('rd').textContent = dur + 's';
+  document.getElementById('ra').textContent = arc + '°';
+  document.getElementById('rv').textContent = vel !== '—' ? vel+'°/s' : '—';
+}
+
+// ══════════════════════════════════════════
+// PFAD AUF HAUPTHIMMEL ZEICHNEN
+// ══════════════════════════════════════════
+function azElToXY(az, el) {
+  // Natürliche Himmelsansicht: Azimut horizontal, Elevation vertikal
+  // Bildmitte = Blickrichtung; ±90° Sichtfeld auf die Bildschirmbreite
+  const hx=cv.width/2, hy=cv.height/2;
+  const spanX=Math.min(hx,hy)*0.85/45;  // Skalierung: 45° = voller Radius
+  // Azimut-Differenz zur Bildmitte, sauber über die 0°/360°-Grenze
+  let daz=az-S.azCenter;
+  if (daz>180) daz-=360; if (daz<-180) daz+=360;
+  const del=el-S.elCenter;
+  return {x: hx+daz*spanX, y: hy-del*spanX};
+}  
+function drawPath() {
+  // Beim Aufzeichnen KEIN kritzelnder Pfad mehr (lenkt vom Himmel ab).
+  // Nur ein ruhiger, dezenter Punkt an der aktuellen Blickrichtung.
+  cx.clearRect(0,0,cv.width,cv.height);
+  if (S.path.length < 1) return;
+  const L = azElToXY(S.az, S.el);
+  cx.save();
+  cx.fillStyle='#f0b840'; cx.shadowColor='#f0b840'; cx.shadowBlur=12;
+  cx.globalAlpha=0.85;
+  cx.beginPath(); cx.arc(L.x,L.y,5,0,Math.PI*2); cx.fill();
+  cx.restore();
+}
+
+// ══════════════════════════════════════════
+// RECORD-BUTTON
+// ══════════════════════════════════════════
+const recBtn = document.getElementById('rec-btn');
+let recInterval = null;
+function startRec() {
+  // iOS: Sensor-Berechtigung beim ersten Tastendruck anfordern
+  if (S.needsIosPermission) {
+    S.needsIosPermission = false;
+    DeviceOrientationEvent.requestPermission().then(r => {
+      if (r === 'granted') startDeviceOrientation();
+    });
+    return; // Ersten Druck nur für Berechtigung nutzen, nicht aufnehmen
+  }
+  S.path=[]; S.recStart=Date.now(); S.recording=true;
+  S.azCenter=S.az; S.elCenter=S.el;
+  
+  recBtn.classList.add('rec');
+  document.getElementById('rec-stats').classList.add('on');
+  document.getElementById('rec-hint').textContent = 'Kamera → Meteor · Taste halten · Folgen';
+  if (!S.sensorActive) recInterval = setInterval(()=>{ if(S.recording){addPt();drawPath();} }, 80);
+}
+function stopRec() {
+  S.recording=false; recBtn.classList.remove('rec'); clearInterval(recInterval);
+  document.getElementById('rec-hint').textContent = 'gedrückt halten = Pfad aufnehmen';
+  if (S.path.length > 1) openProps();
+}
+recBtn.addEventListener('mousedown', startRec);
+recBtn.addEventListener('touchstart', e=>{ e.preventDefault(); startRec(); }, {passive:false});
+recBtn.addEventListener('mouseup', stopRec);
+recBtn.addEventListener('touchend', stopRec);
+recBtn.addEventListener('mouseleave', ()=>{ if(S.recording) stopRec(); });
+
+// ══════════════════════════════════════════
+// PROPS-PANEL
+// ══════════════════════════════════════════
+let prevAnimId = null;
+
+function openProps() {
+  renderPathPreview();
+  updateColLock();
+  setSpeed(S.p.speed);
+  document.getElementById('props-panel').classList.add('open');
+  setTimeout(()=>{
+    startPreviewAnim();
+    drawLmSky(parseFloat(S.p.lm)||5);
+  }, 80);
+}
+function closeProps() {
+  document.getElementById('props-panel').classList.remove('open');
+  cx.clearRect(0,0,cv.width,cv.height);
+  document.getElementById('rec-stats').classList.remove('on');
+  if (prevAnimId) { cancelAnimationFrame(prevAnimId); prevAnimId=null; }
+}
+
+// ── Pfad-Vorschau (statisch) ──
+function renderPathPreview() {
+  const path = S.path; if (path.length<2) return;
+  // Meta-Werte
+  const dur=path[path.length-1].t.toFixed(1);
+  const arc=calcArc().toFixed(1);
+  const vel=parseFloat(dur)>0.1?(calcArc()/parseFloat(dur)).toFixed(1):'—';
+  document.getElementById('path-meta').innerHTML =
+    `Von: <b>${azToDir(path[0].az)} ${path[0].el.toFixed(0)}°</b><br>` +
+    `Nach: <b>${azToDir(path[path.length-1].az)} ${path[path.length-1].el.toFixed(0)}°</b><br>` +
+    `Bogen: <b>~${arc}°</b><br>Dauer: <b>${dur}s</b><br>Ø v: <b>${vel!=='—'?vel+'°/s':'—'}</b>`;
+  renderCompass(path);
+}
+function renderCompass(path) {
+  const c=document.getElementById('path-compass'), x=c.getContext('2d');
+  const S2=150; x.clearRect(0,0,S2,S2);
+  const hx=75, hy=75, r=58;
+  // Kreis
+  x.strokeStyle='rgba(79,142,255,0.25)'; x.lineWidth=1.5;
+  x.beginPath(); x.arc(hx,hy,r,0,Math.PI*2); x.stroke();
+  // innerer Ring (Elevation-Andeutung)
+  x.strokeStyle='rgba(79,142,255,0.10)'; x.lineWidth=1;
+  x.beginPath(); x.arc(hx,hy,r*0.5,0,Math.PI*2); x.stroke();
+  // Himmelsrichtungen
+  x.fillStyle='rgba(138,170,216,0.7)'; x.font='11px monospace'; x.textAlign='center';
+  x.fillText('N',hx,hy-r-6); x.fillText('S',hx,hy+r+14);
+  x.textAlign='right';  x.fillText('W',hx-r-6,hy+4);
+  x.textAlign='left';   x.fillText('O',hx+r+6,hy+4);
+  // Position: Azimut = Winkel, Elevation = Abstand (Horizont=Rand, Zenit=Mitte)
+  const toXY = p => {
+    const rad=(p.az-90)*Math.PI/180;
+    const dist=(1-Math.max(0,Math.min(90,p.el))/90)*(r-6);
+    return {x:hx+Math.cos(rad)*dist, y:hy+Math.sin(rad)*dist};
+  };
+  const s=toXY(path[0]), e=toXY(path[path.length-1]);
+  // Linie Start→Ende
+  x.strokeStyle='rgba(200,216,248,0.55)'; x.lineWidth=2; x.lineCap='round';
+  x.beginPath(); x.moveTo(s.x,s.y); x.lineTo(e.x,e.y); x.stroke();
+  // Richtungspfeil in der Mitte der Linie
+  const mx=(s.x+e.x)/2, my=(s.y+e.y)/2, ang=Math.atan2(e.y-s.y,e.x-s.x);
+  x.strokeStyle='#f0b840'; x.lineWidth=2; x.globalAlpha=0.9;
+  x.beginPath();
+  x.moveTo(mx-Math.cos(ang-0.5)*8,my-Math.sin(ang-0.5)*8);
+  x.lineTo(mx+Math.cos(ang)*4,my+Math.sin(ang)*4);
+  x.lineTo(mx-Math.cos(ang+0.5)*8,my-Math.sin(ang+0.5)*8);
+  x.stroke(); x.globalAlpha=1;
+  // Start-Punkt (blau) und End-Punkt (gelb, leuchtend)
+  x.fillStyle='rgba(100,136,184,0.7)'; x.beginPath(); x.arc(s.x,s.y,4,0,Math.PI*2); x.fill();
+  x.fillStyle='#f0b840'; x.shadowColor='#f0b840'; x.shadowBlur=8;
+  x.beginPath(); x.arc(e.x,e.y,5,0,Math.PI*2); x.fill(); x.shadowBlur=0;
+}
+function azToDir(az) {
+  return ['N','NNO','NO','ONO','O','OSO','SO','SSO','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(az/22.5)%16];
+}
+
+// ══════════════════════════════════════════
+// METEOR PREVIEW ANIMATION
+// ══════════════════════════════════════════
+const COLOR_MAP = {
+  red:    {head:'#ff7050',core:'#ffaa88',trail:'rgba(255,80,40,',  glow:'rgba(255,60,20,'},
+  orange: {head:'#ff9940',core:'#ffcc80',trail:'rgba(255,140,40,', glow:'rgba(255,110,20,'},
+  yellow: {head:'#ffe060',core:'#fff5b0',trail:'rgba(255,220,60,', glow:'rgba(240,180,20,'},
+  green:  {head:'#60ff90',core:'#b0ffcc',trail:'rgba(60,230,100,', glow:'rgba(30,180,80,'},
+  blue:   {head:'#80c8ff',core:'#d0eeff',trail:'rgba(80,160,255,', glow:'rgba(40,100,255,'},
+  white:  {head:'#e8f0ff',core:'#ffffff',trail:'rgba(200,220,255,',glow:'rgba(150,180,255,'},
+};
+
+function getMeteorColors() {
+  const cols = S.p.col; const speed = S.p.speed;
+  // Wurde mindestens eine Farbe gewählt? Dann die auffälligste (erste) nehmen.
+  // (IMO: Farben werden in Reihenfolge der Auffälligkeit notiert)
+  if (cols && cols.length > 0) return COLOR_MAP[cols[0]] || COLOR_MAP.white;
+  // Keine Farbe gewählt → physikalische Schätzung aus Geschwindigkeit
+  if (speed < 8)  return COLOR_MAP.red;
+  if (speed < 20) return COLOR_MAP.yellow;
+  return COLOR_MAP.blue;
+}
+
+function startPreviewAnim() {
+  const c = document.getElementById('preview-canvas');
+  if (!c) return;
+  c.width  = c.offsetWidth  || 340;
+  c.height = c.offsetHeight || 72;
+  if (prevAnimId) cancelAnimationFrame(prevAnimId);
+  const W=c.width, H=c.height;
+  const ctx = c.getContext('2d');
+  // Sterne (fest, seed aus aktuellem timestamp)
+  const stars=[];
+  let seed=77;
+  const rng=()=>{ seed=(seed*1664525+1013904223)&0xffffffff; return (seed>>>0)/0xffffffff; };
+  for(let i=0;i<60;i++) stars.push({x:rng()*W,y:rng()*H,r:rng()<0.12?1.1:0.65,op:0.15+rng()*0.45});
+  let pos=-50, phase='fly', burstT=0, pauseT=0, flickT=0, flickV=1, trainSegs=[], frame=0;
+  function reset(){ pos=-50;phase='fly';burstT=0;pauseT=0;flickT=0;flickV=1;trainSegs=[];frame=0; }
+  function anim() {
+    const spd=S.p.speed, mag=parseFloat(S.p.mag)||2;
+    const trail=S.p.trail||'none', light=S.p.light||'steady';
+    const {head,core,trail:tc,glow:gc} = getMeteorColors();
+    const trailPx = {none:8,wake:28,train_short:65,train_persist:120,train_long:200}[trail]||20;
+    const headR = mag<=-3?9 : mag<=0?6 : mag<=3?4 : 2.5;
+    const glowR = headR*(3+Math.max(0,-mag)*0.4);
+    const pxpf  = 1+(spd/40)*11;
+    const py    = H*0.5;
+    // Flackern
+    if (light==='flicker')     { flickT+=0.35; flickV=0.55+0.45*Math.sin(flickT*7+Math.sin(flickT*3.7)); }
+    else if (light==='brightening') { flickV=Math.min(1.4,0.4+pos/(W*0.8)); }
+    else flickV=1;
+    // Hintergrund
+    ctx.fillStyle='#020408'; ctx.fillRect(0,0,W,H);
+    stars.forEach(s=>{ctx.globalAlpha=s.op;ctx.fillStyle='#c8d8f8';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();});
+    ctx.globalAlpha=1;
+    if (phase==='fly') {
+      // Persistent Train
+      if ((trail==='train_persist'||trail==='train_long')&&pos>0&&pos<W) trainSegs.push({x:pos,op:1});
+      trainSegs.forEach(s=>s.op=Math.max(0,s.op-(trail==='train_long'?0.004:0.015)));
+      trainSegs=trainSegs.filter(s=>s.op>0.01);
+      for(let i=1;i<trainSegs.length;i++){
+        const a=trainSegs[i-1],b=trainSegs[i],op=Math.min(a.op,b.op);
+        ctx.strokeStyle=`rgba(80,220,120,${op*0.6})`;ctx.lineWidth=2;ctx.lineCap='round';
+        ctx.beginPath();ctx.moveTo(a.x,py);ctx.lineTo(b.x,py);ctx.stroke();
+      }
+      if (pos>-10&&pos<W+trailPx) {
+        const tx=Math.max(0,pos-trailPx), eff=pos-tx;
+        // Glow-Trail
+        if(eff>2){ const g=ctx.createLinearGradient(tx,py,pos,py);g.addColorStop(0,gc+'0)');g.addColorStop(1,gc+(0.16*flickV)+')');ctx.strokeStyle=g;ctx.lineWidth=headR*3;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(tx,py);ctx.lineTo(pos,py);ctx.stroke(); }
+        // Haupt-Trail
+        if(eff>2){ const g=ctx.createLinearGradient(tx,py,pos,py);g.addColorStop(0,tc+'0)');g.addColorStop(0.6,tc+(0.3*flickV)+')');g.addColorStop(1,tc+(0.65*flickV)+')');ctx.strokeStyle=g;ctx.lineWidth=Math.max(1,headR*0.85);ctx.lineCap='round';ctx.beginPath();ctx.moveTo(tx,py);ctx.lineTo(pos,py);ctx.stroke(); }
+        // Kern-Trail
+        if(trail!=='none'&&eff>5){ const g=ctx.createLinearGradient(tx,py,pos,py);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(1,`rgba(255,255,255,${0.45*flickV})`);ctx.strokeStyle=g;ctx.lineWidth=Math.max(0.5,headR*0.28);ctx.beginPath();ctx.moveTo(tx,py);ctx.lineTo(pos,py);ctx.stroke(); }
+        // Wake-Partikel
+        if(trail==='wake'||trail==='train_short') for(let i=0;i<3;i++){ctx.globalAlpha=(0.25-i*0.07)*flickV;ctx.fillStyle=head;ctx.beginPath();ctx.arc(pos-5-i*4,py+Math.sin(frame*0.8+i*1.3)*2,0.7,0,Math.PI*2);ctx.fill();}
+        ctx.globalAlpha=1;
+        // Bolide-Fragmente
+        if(light==='fragmented'&&pos>W*0.3){const fc=Math.min(3,Math.floor((pos-W*0.3)/(W*0.08)));for(let i=0;i<fc;i++){ctx.globalAlpha=Math.max(0,0.55-i*0.14);ctx.fillStyle=head;ctx.beginPath();ctx.arc(pos-12-i*15+Math.sin(frame*0.4+i)*2,py+Math.sin(frame*0.5+i*1.8)*(3+i*2.5),Math.max(0.5,headR*0.3-i*0.35),0,Math.PI*2);ctx.fill();} ctx.globalAlpha=1;}
+        // Kopf-Glow
+        const gw=ctx.createRadialGradient(pos,py,0,pos,py,glowR*flickV);gw.addColorStop(0,gc+(0.45*flickV)+')');gw.addColorStop(1,gc+'0)');ctx.fillStyle=gw;ctx.beginPath();ctx.arc(pos,py,glowR*flickV,0,Math.PI*2);ctx.fill();
+        // Kern
+        ctx.fillStyle=core;ctx.beginPath();ctx.arc(pos,py,headR*0.5*flickV,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle=head;ctx.beginPath();ctx.arc(pos,py,headR*flickV,0,Math.PI*2);ctx.fill();
+      }
+      pos+=pxpf; frame++;
+      if (light==='terminal_burst'&&pos>W*0.65) { phase='burst'; burstT=0; }
+      if (pos>W+80&&phase==='fly') { phase='pause'; pauseT=0; }
+    } else if (phase==='burst') {
+      burstT++;
+      const bx=pos-pxpf*3, br=Math.min(burstT*3.5,45), bA=Math.max(0,1-burstT/20);
+      const bg=ctx.createRadialGradient(bx,py,0,bx,py,br);
+      bg.addColorStop(0,`rgba(255,255,220,${bA})`);bg.addColorStop(0.3,`${gc}${bA*0.65})`);bg.addColorStop(1,`${gc}0)`);
+      ctx.fillStyle=bg;ctx.beginPath();ctx.arc(bx,py,br,0,Math.PI*2);ctx.fill();
+      for(let i=0;i<7;i++){const a=(i/7)*Math.PI*2,d=burstT*3;ctx.globalAlpha=bA*0.65;ctx.fillStyle=head;ctx.beginPath();ctx.arc(bx+Math.cos(a)*d,py+Math.sin(a)*d*0.45,Math.max(0.5,headR*0.35-burstT*0.12),0,Math.PI*2);ctx.fill();}
+      ctx.globalAlpha=1;
+      if(burstT>25){phase='pause';pauseT=0;}
+    } else if (phase==='pause') {
+      pauseT++;
+      if(pauseT > (trail==='none'?18:trail==='wake'?30:50)) reset();
+    }
+    // Label
+    const sc=spd<8?'Langsam':spd<20?'Mittel':spd<30?'Schnell':'Sehr schnell';
+    document.getElementById('preview-label').textContent=`mag ${S.p.mag} · ${sc}`;
+    prevAnimId = requestAnimationFrame(anim);
+  }
+  reset();
+  prevAnimId = requestAnimationFrame(anim);
+  // Physik-Hinweis
+  updatePreviewInfo();
+}
+
+function updatePreviewInfo() {
+  const spd=S.p.speed;
+  const hints=[];
+  if(spd<8)       hints.push('Langsam → Luftplasma (N₂/O) leuchtet rot-orange');
+  else if(spd>25) hints.push('Schnell → Ionisierung → Blau/Weiß (Ca-Linien 10.000 K)');
+  else            hints.push('Mittel → Natrium-Linie (Na) dominiert: Gelb/Weiß');
+  if(S.p.trail==='train_persist'||S.p.trail==='train_long') hints.push('Grüner Train = O-Linie (5577 Å)');
+  if(S.p.light==='terminal_burst') hints.push('Terminalblitz = Bolide zerbirst');
+  const el=document.getElementById('preview-info');
+  if(el) el.textContent=hints.join(' · ');
+}
+
+// ══════════════════════════════════════════
+// CHIP-AUSWAHL
+// ══════════════════════════════════════════
+// ── Helligkeit: Schieberegler mit 6 Stufen ──
+// Jede Stufe: gespeicherter Magnitude-Wert (IMO), Anker-Text, Hinweis, Punkt-Helligkeit(0..1)
+const MAG_STEPS = [
+  { v:'-4', anchor:'Feuerkugel — heller als alles, wirft Schatten', hint:'Bolide · Magnitude ≈ −4 oder heller' },
+  { v:'-2', anchor:'So hell wie die Venus — der helle Planet', hint:'sehr heller Meteor · Magnitude ≈ −2' },
+  { v:'-1', anchor:'So hell wie Sirius — der hellste Stern', hint:'heller Meteor · Magnitude ≈ −1' },
+  { v:'2',  anchor:'So hell wie die Sterne des Großen Wagens', hint:'mittelheller Meteor · Magnitude ≈ +2' },
+  { v:'3',  anchor:'So hell wie die Sterne der Cassiopeia (Himmels-W)', hint:'schwächerer Meteor · Magnitude ≈ +3' },
+  { v:'5',  anchor:'Schwach — kaum zu sehen, fast übersehen', hint:'sehr schwacher Meteor · Magnitude ≈ +5' },
+];
+function setMag(idx) {
+  idx = parseInt(idx);
+  const step = MAG_STEPS[idx];
+  S.p.mag = step.v;
+  document.getElementById('mag-anchor').textContent = step.anchor;
+  document.getElementById('mag-hint').textContent = step.hint;
+  document.getElementById('mag-sl').value = idx;
+  updateColLock();
+  updatePreviewInfo();
+}
+function toggleDetails() {
+  const t=document.getElementById('details-toggle');
+  const b=document.getElementById('details-body');
+  t.classList.toggle('open'); b.classList.toggle('open');
+}
+
+function pick(el) {
+  const g=el.dataset.g;
+  document.querySelectorAll(`[data-g="${g}"]`).forEach(c=>c.classList.remove('on'));
+  el.classList.add('on');
+  S.p[g]=el.dataset.v;
+  if(g==='mag') updateColLock();
+  updatePreviewInfo();
+}
+function pickCol(el) {
+  const v=el.dataset.v;
+  if(el.classList.contains('on')){ el.classList.remove('on'); S.p.col=S.p.col.filter(x=>x!==v); }
+  else { el.classList.add('on'); if(!S.p.col.includes(v)) S.p.col.push(v); }
+  updatePreviewInfo();
+}
+function pickLm(el) {
+  document.querySelectorAll('#lm-chips .lm-chip').forEach(c=>c.classList.remove('on'));
+  el.classList.add('on'); S.p.lm=el.dataset.v;
+  const lm={'3':'Vollmond/Smog — kaum Sterne','4':'Stadtrand — Großer Wagen sichtbar',
+    '5':'Normaler Landhimmel — Milchstraße andeutungsweise','6':'Guter Landhimmel — Milchstraße klar',
+    '6.5':'Sehr dunkler Himmel — Milchstraße mit Struktur','7':'Perfekt — Zodiakallicht sichtbar'};
+  document.getElementById('lm-hint').textContent=lm[el.dataset.v]||'';
+  drawLmSky(parseFloat(el.dataset.v));
+}
+function updateColLock() {
+  // Farbe ab Magnitude ≥ +3 nicht mehr wahrnehmbar (IMO: schwächer als +2)
+  const weak = parseFloat(S.p.mag) > 2;
+  const chips=document.getElementById('col-chips');
+  const locked=document.getElementById('col-locked');
+  chips.style.opacity=weak?'0.25':'1';
+  chips.style.pointerEvents=weak?'none':'';
+  locked.style.display=weak?'block':'none';
+  if(weak){ S.p.col=[]; document.querySelectorAll('[data-g="col"]').forEach(c=>c.classList.remove('on')); }
+}
+function setSpeed(v, updateSlider=true) {
+  S.p.speed=parseInt(v);
+  document.getElementById('speed-val').textContent=v+' °/s';
+  if(updateSlider) document.getElementById('speed-sl').value=Math.min(40,v);
+  const vi=parseInt(v);
+  let cls,hint;
+  if(vi<8)       {cls='Langsam';      hint='Tauriden (~27 km/s) — wie ein Flugzeug';}
+  else if(vi<20) {cls='Mittel';       hint='Sporadisch (~40 km/s) — rasch verfolgbar';}
+  else if(vi<30) {cls='Schnell';      hint='Perseiden (~59 km/s) — kaum zu folgen';}
+  else           {cls='Sehr schnell'; hint='Leoniden (~71 km/s) — blitzartig';}
+  document.getElementById('speed-cls').textContent=cls;
+  document.getElementById('speed-hint').textContent=hint;
+  updatePreviewInfo();
+}
+
+// ══════════════════════════════════════════
+// GRENZGRÖSSE STERNFELD
+// ══════════════════════════════════════════
+let lmStars=null;
+function buildLmStars(){
+  const s=[];let sd=42;
+  const r=()=>{sd=(sd*1664525+1013904223)&0xffffffff;return (sd>>>0)/0xffffffff;};
+  for(let i=0;i<180;i++) s.push({x:r(),y:r(),m:1+r()*6.2});
+  return s;
+}
+function drawLmSky(lm){
+  const c=document.getElementById('lm-cv'); if(!c) return;
+  c.width=c.offsetWidth||320;
+  if(!lmStars) lmStars=buildLmStars();
+  const x=c.getContext('2d'),W=c.width,H=68;
+  const br=Math.max(0,1-(lm-3)/4.5);
+  x.fillStyle=`rgb(${Math.round(4+br*30)},${Math.round(6+br*20)},${Math.round(15+br*40)})`; x.fillRect(0,0,W,H);
+  lmStars.forEach(st=>{
+    if(st.m>lm) return;
+    const op=0.3+Math.max(0,(lm-st.m)/lm)*0.7, r=st.m<2?2.2:st.m<4?1.4:0.9;
+    x.fillStyle=`rgba(200,220,255,${op})`; x.beginPath(); x.arc(st.x*W,6+st.y*(H-20),r,0,Math.PI*2); x.fill();
+  });
+  if(lm>=5){x.fillStyle=`rgba(100,130,200,${Math.min(1,(lm-5)/2)*0.12})`;x.beginPath();x.ellipse(W*0.6,H*0.4,W*0.35,H*0.18,0.4,0,Math.PI*2);x.fill();}
+  const n=lmStars.filter(s=>s.m<=lm).length;
+  x.fillStyle='rgba(138,170,216,0.65)'; x.font='10px monospace'; x.textAlign='left'; x.fillText(`~${n} Sterne sichtbar`,6,H-8);
+}
+
+// ══════════════════════════════════════════
+// SPEICHERN
+// ══════════════════════════════════════════
+function saveSighting() {
+  S.sightings.unshift({
+    id: Date.now().toString(36)+Math.random().toString(36).slice(2,5),
+    timestamp: new Date().toISOString(),
+    location: S.location,
+    path: [...S.path],
+    mag:S.p.mag, col:[...S.p.col], trail:S.p.trail, light:S.p.light,
+    sound:S.p.sound, shower:S.p.shower, speed:S.p.speed, lm:S.p.lm,
+    notes: document.getElementById('notes').value
+  });
+  closeProps();
+  cx.clearRect(0,0,cv.width,cv.height);
+  showToast('Sichtung gespeichert ✓');
+  document.getElementById('list-btn').classList.add('on');
+  document.getElementById('notes').value='';
+  // Selektionen zurücksetzen die einmalig sind
+  S.p.shower=null; S.p.light=null;
+  document.querySelectorAll('[data-g="shower"],[data-g="light"]').forEach(c=>c.classList.remove('on'));
+}
+function showToast(msg) {
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on');
+  setTimeout(()=>t.classList.remove('on'), 2800);
+}
+
+// ══════════════════════════════════════════
+// SICHTUNGS-LISTE
+// ══════════════════════════════════════════
+const listAnims={};
+const colN  ={white:'Weiß',yellow:'Gelb',orange:'Orange',red:'Rot',blue:'Blau',green:'Grün'};
+const trailN={none:'Kein',wake:'Wake',train_short:'Train <1s',train_persist:'Train 1–10s',train_long:'Train >10s'};
+const lightN={steady:'Gleichmäßig',brightening:'Heller werdend',flicker:'Flackernd',terminal_burst:'Terminalblitz',fragmented:'Zerfällt'};
+const soundN={none:'—',electro:'Elektrophon',boom:'Knall'};
+const showerN={PER:'Perseiden',GEM:'Geminiden',LEO:'Leoniden',ETA:'η-Aquariiden',ORI:'Orioniden',QUA:'Quadrantiden',DRA:'Drakoniden',SPO:'Sporadisch'};
+
+function openList()  { renderList(); document.getElementById('list-panel').classList.add('open'); }
+function closeList() {
+  document.getElementById('list-panel').classList.remove('open');
+  Object.keys(listAnims).forEach(id=>{ cancelAnimationFrame(listAnims[id]); delete listAnims[id]; });
+}
+function deleteSighting(id) {
+  if(listAnims[id]){ cancelAnimationFrame(listAnims[id]); delete listAnims[id]; }
+  S.sightings=S.sightings.filter(s=>s.id!==id);
+  if(!S.sightings.length) document.getElementById('list-btn').classList.remove('on');
+  renderList();
+}
+
+function renderList() {
+  Object.keys(listAnims).forEach(id=>{ cancelAnimationFrame(listAnims[id]); delete listAnims[id]; });
+  const el=document.getElementById('list-content');
+  if (!S.sightings.length) {
+    el.innerHTML='<div style="padding:40px 20px;text-align:center;font-family:var(--mono);font-size:12px;color:var(--text3);">Noch keine Sichtungen.</div>';
+    return;
+  }
+  el.innerHTML = S.sightings.map(s=>{
+    const d=new Date(s.timestamp);
+    const dt=d.toLocaleDateString('de-DE')+' '+d.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+    let arc='?';
+    if(s.path&&s.path.length>1){
+      const azs=s.path.map(p=>p.az),els=s.path.map(p=>p.el);
+      const da=Math.min(Math.abs(Math.max(...azs)-Math.min(...azs)),360-Math.abs(Math.max(...azs)-Math.min(...azs)));
+      arc=Math.hypot(da,Math.max(...els)-Math.min(...els)).toFixed(1);
+    }
+    const sD=s.path&&s.path.length?azToDir(s.path[0].az)+' '+s.path[0].el.toFixed(0)+'°':'?';
+    const eD=s.path&&s.path.length>1?azToDir(s.path[s.path.length-1].az)+' '+s.path[s.path.length-1].el.toFixed(0)+'°':'?';
+    const dur=s.path&&s.path.length>1?s.path[s.path.length-1].t.toFixed(1)+'s':'?';
+    return `<div class="sc" id="sc-${s.id}">
+      <div class="sc-top"><span class="sc-time">${dt}</span><span class="sc-mag">mag ${s.mag}</span></div>
+      <div style="position:relative;overflow:hidden;background:#020408;border-radius:8px;margin-bottom:10px;cursor:pointer;"
+           onclick="playListAnim('${s.id}')" title="Tippen für Animation">
+        <canvas id="la-${s.id}" style="width:100%;height:80px;display:block;"></canvas>
+        <div id="la-play-${s.id}" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;">
+          <div style="width:28px;height:28px;border-radius:50%;border:1px solid rgba(138,170,216,0.4);display:flex;align-items:center;justify-content:center;">
+            <div style="width:0;height:0;border-top:6px solid transparent;border-bottom:6px solid transparent;border-left:9px solid rgba(138,170,216,0.5);margin-left:2px;"></div>
+          </div>
+        </div>
+        <div style="position:absolute;bottom:5px;right:8px;font-family:var(--mono);font-size:9px;color:rgba(138,170,216,0.4);">${s.speed||'?'}°/s · ${trailN[s.trail]||'—'}</div>
+      </div>
+      <div class="sc-data">
+        Pfad: <b>${sD} → ${eD}</b>, ~${arc}°, ${dur}<br>
+        Farbe: ${(s.col||[]).map(c=>colN[c]||c).join(', ')||'—'} · ${lightN[s.light]||'—'}<br>
+        Trail: ${trailN[s.trail]||'—'} · Ton: ${soundN[s.sound]||'—'}<br>
+        v: ${s.speed||'?'}°/s · Grenzgröße: +${s.lm||'?'}<br>
+        ${s.shower?'Schauer: '+showerN[s.shower]+'<br>':''}
+        ${s.notes?`<span style="color:var(--text3);">"${s.notes}"</span>`:''}
+      </div>
+      <button class="del-btn" onclick="deleteSighting('${s.id}')">✕ löschen</button>
+    </div>`;
+  }).join('');
+  // Standbilder zeichnen (kein autoplay mehr)
+  setTimeout(()=> S.sightings.forEach(s=> drawListStill(s)), 60);
+}
+
+function drawListStill(s) {
+  const c=document.getElementById('la-'+s.id); if(!c) return;
+  c.width=c.offsetWidth||320; c.height=80;
+  const W=c.width, H=80, ctx=c.getContext('2d');
+  const speed=s.speed||15, mag=parseFloat(s.mag)||2, trail=s.trail||'none';
+  const cols=s.col||[];
+  let cm;
+  if(cols.length>0&&cols[0]!=='white') cm=COLOR_MAP[cols[0]]||COLOR_MAP.white;
+  else if(speed<8) cm=COLOR_MAP.red; else if(speed<20) cm=COLOR_MAP.yellow; else cm=COLOR_MAP.blue;
+  const {head,core,trail:tc,glow:gc}=cm;
+  const trailPx={none:8,wake:28,train_short:60,train_persist:110,train_long:190}[trail]||20;
+  const headR=mag<=-3?9:mag<=0?6:mag<=3?4:2.5, glowR=headR*(3+Math.max(0,-mag)*0.4);
+  // Statisches Standbild: Meteor in der Mitte
+  const stars=[];let sd=parseInt(s.id,36)%999+10;
+  const rng=()=>{sd=(sd*1664525+1013904223)&0xffffffff;return (sd>>>0)/0xffffffff;};
+  for(let i=0;i<45;i++) stars.push({x:rng()*W,y:rng()*H,r:rng()<0.12?1.1:0.65,op:0.15+rng()*0.45});
+  ctx.fillStyle='#020408'; ctx.fillRect(0,0,W,H);
+  stars.forEach(st=>{ctx.globalAlpha=st.op;ctx.fillStyle='#c8d8f8';ctx.beginPath();ctx.arc(st.x,st.y,st.r,0,Math.PI*2);ctx.fill();});
+  ctx.globalAlpha=1;
+  const pos=W*0.62, py=H*0.5, tx=Math.max(0,pos-trailPx);
+  if(trailPx>2){
+    const g=ctx.createLinearGradient(tx,py,pos,py);g.addColorStop(0,tc+'0)');g.addColorStop(1,tc+'0.55)');
+    ctx.strokeStyle=g;ctx.lineWidth=Math.max(1,headR*0.85);ctx.lineCap='round';ctx.beginPath();ctx.moveTo(tx,py);ctx.lineTo(pos,py);ctx.stroke();
+  }
+  const gw=ctx.createRadialGradient(pos,py,0,pos,py,glowR);gw.addColorStop(0,gc+'0.4)');gw.addColorStop(1,gc+'0)');
+  ctx.fillStyle=gw;ctx.beginPath();ctx.arc(pos,py,glowR,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=core;ctx.beginPath();ctx.arc(pos,py,headR*0.5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=head;ctx.beginPath();ctx.arc(pos,py,headR,0,Math.PI*2);ctx.fill();
+}
+
+function playListAnim(id) {
+  // Bereits laufende Animation für diese Karte stoppen
+  if(listAnims[id]){ cancelAnimationFrame(listAnims[id]); delete listAnims[id]; }
+  // Play-Button ausblenden
+  const playBtn=document.getElementById('la-play-'+id); if(playBtn) playBtn.style.display='none';
+  const s=S.sightings.find(x=>x.id===id); if(!s) return;
+  startListAnim(s, ()=>{
+    // Callback wenn Animation fertig: Standbild + Play-Button wieder zeigen
+    drawListStill(s);
+    if(playBtn) playBtn.style.display='flex';
+  });
+}
+
+function startListAnim(s, onDone) {
+  const c=document.getElementById('la-'+s.id); if(!c) return;
+  c.width=c.offsetWidth||320; c.height=80;
+  const W=c.width, H=80, ctx=c.getContext('2d');
+  const speed=s.speed||15, mag=parseFloat(s.mag)||2, trail=s.trail||'none', light=s.light||'steady';
+  const cols=s.col||[];
+  let cm;
+  if(cols.length>0&&cols[0]!=='white') cm=COLOR_MAP[cols[0]]||COLOR_MAP.white;
+  else if(speed<8) cm=COLOR_MAP.red; else if(speed<20) cm=COLOR_MAP.yellow; else cm=COLOR_MAP.blue;
+  const {head,core,trail:tc,glow:gc}=cm;
+  const trailPx={none:8,wake:28,train_short:60,train_persist:110,train_long:190}[trail]||20;
+  const headR=mag<=-3?9:mag<=0?6:mag<=3?4:2.5, glowR=headR*(3+Math.max(0,-mag)*0.4);
+  const pxpf=1+(speed/40)*9;
+  const stars=[];let sd=parseInt(s.id,36)%999+10;
+  const rng=()=>{sd=(sd*1664525+1013904223)&0xffffffff;return (sd>>>0)/0xffffffff;};
+  for(let i=0;i<45;i++) stars.push({x:rng()*W,y:rng()*H,r:rng()<0.12?1.1:0.65,op:0.15+rng()*0.45});
+  let pos=-50,phase='fly',burstT=0,pauseT=0,flickT=0,flickV=1,trainSegs=[],frame=0;
+  function af(){
+    const py=H*0.5;
+    if(light==='flicker'){flickT+=0.35;flickV=0.55+0.45*Math.sin(flickT*7+Math.sin(flickT*3.7));}
+    else if(light==='brightening'){flickV=Math.min(1.4,0.4+pos/(W*0.8));}
+    else flickV=1;
+    ctx.fillStyle='#020408';ctx.fillRect(0,0,W,H);
+    stars.forEach(st=>{ctx.globalAlpha=st.op;ctx.fillStyle='#c8d8f8';ctx.beginPath();ctx.arc(st.x,st.y,st.r,0,Math.PI*2);ctx.fill();});
+    ctx.globalAlpha=1;
+    if(phase==='fly'){
+      if((trail==='train_persist'||trail==='train_long')&&pos>0&&pos<W) trainSegs.push({x:pos,op:1});
+      trainSegs.forEach(s2=>s2.op=Math.max(0,s2.op-(trail==='train_long'?0.005:0.018)));
+      trainSegs=trainSegs.filter(s2=>s2.op>0.01);
+      for(let i=1;i<trainSegs.length;i++){const a=trainSegs[i-1],b=trainSegs[i],op=Math.min(a.op,b.op);ctx.strokeStyle=`rgba(80,220,120,${op*0.6})`;ctx.lineWidth=2;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(a.x,py);ctx.lineTo(b.x,py);ctx.stroke();}
+      if(pos>-10&&pos<W+trailPx){
+        const tx=Math.max(0,pos-trailPx),eff=pos-tx;
+        if(eff>2){const g=ctx.createLinearGradient(tx,py,pos,py);g.addColorStop(0,gc+'0)');g.addColorStop(1,gc+(0.16*flickV)+')');ctx.strokeStyle=g;ctx.lineWidth=headR*3;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(tx,py);ctx.lineTo(pos,py);ctx.stroke();}
+        if(eff>2){const g=ctx.createLinearGradient(tx,py,pos,py);g.addColorStop(0,tc+'0)');g.addColorStop(0.6,tc+(0.3*flickV)+')');g.addColorStop(1,tc+(0.65*flickV)+')');ctx.strokeStyle=g;ctx.lineWidth=Math.max(1,headR*0.85);ctx.lineCap='round';ctx.beginPath();ctx.moveTo(tx,py);ctx.lineTo(pos,py);ctx.stroke();}
+        if(light==='fragmented'&&pos>W*0.3){const fc=Math.min(3,Math.floor((pos-W*0.3)/(W*0.1)));for(let i=0;i<fc;i++){ctx.globalAlpha=Math.max(0,0.5-i*0.14);ctx.fillStyle=head;ctx.beginPath();ctx.arc(pos-12-i*15+Math.sin(frame*0.4+i)*2,py+Math.sin(frame*0.5+i*1.8)*(3+i*2.5),Math.max(0.5,headR*0.3-i*0.35),0,Math.PI*2);ctx.fill();}ctx.globalAlpha=1;}
+        const gw=ctx.createRadialGradient(pos,py,0,pos,py,glowR*flickV);gw.addColorStop(0,gc+(0.45*flickV)+')');gw.addColorStop(1,gc+'0)');ctx.fillStyle=gw;ctx.beginPath();ctx.arc(pos,py,glowR*flickV,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle=core;ctx.beginPath();ctx.arc(pos,py,headR*0.5*flickV,0,Math.PI*2);ctx.fill();
+        ctx.fillStyle=head;ctx.beginPath();ctx.arc(pos,py,headR*flickV,0,Math.PI*2);ctx.fill();
+      }
+      pos+=pxpf;frame++;
+      if(light==='terminal_burst'&&pos>W*0.65){phase='burst';burstT=0;}
+      if(pos>W+80&&phase==='fly'){phase='pause';pauseT=0;}
+    } else if(phase==='burst'){
+      burstT++;const bx=pos-pxpf*3,br=Math.min(burstT*3.5,40),bA=Math.max(0,1-burstT/18);
+      const bg=ctx.createRadialGradient(bx,py,0,bx,py,br);bg.addColorStop(0,`rgba(255,255,220,${bA})`);bg.addColorStop(0.3,`${gc}${bA*0.6})`);bg.addColorStop(1,`${gc}0)`);ctx.fillStyle=bg;ctx.beginPath();ctx.arc(bx,py,br,0,Math.PI*2);ctx.fill();
+      for(let i=0;i<7;i++){const a=(i/7)*Math.PI*2,d=burstT*3;ctx.globalAlpha=bA*0.6;ctx.fillStyle=head;ctx.beginPath();ctx.arc(bx+Math.cos(a)*d,py+Math.sin(a)*d*0.45,Math.max(0.5,headR*0.35-burstT*0.12),0,Math.PI*2);ctx.fill();}
+      ctx.globalAlpha=1;if(burstT>22){phase='pause';pauseT=0;}
+    } else {
+      pauseT++;
+      if(pauseT > (trail==='none'?18:trail==='wake'?30:50)) {
+        delete listAnims[s.id];
+        if(onDone) onDone();
+        return; // einmaliger Durchlauf — kein reset
+      }
+    }
+    listAnims[s.id]=requestAnimationFrame(af);
+  }
+  listAnims[s.id]=requestAnimationFrame(af);
+}
+
+// ══════════════════════════════════════════
+// SENSOR-STATUS ÜBERWACHUNG
+// ══════════════════════════════════════════
+let sensorCheckDone = false;
+function checkSensorStatus() {
+  if (sensorCheckDone) return;
+  sensorCheckDone = true;
+  // 3 Sekunden nach Start prüfen — wenn dann noch kein Sensor aktiv:
+  setTimeout(()=>{
+    if (!S.sensorActive) showSensorWarning();
+  }, 3000);
+}
+function showSensorWarning() {
+  // Warnung nur auf Hauptschirm, nicht wenn Panel offen
+  const warn = document.getElementById('sensor-warn');
+  if (warn) warn.style.display = 'flex';
+}
+function dismissSensorWarn() {
+  const warn = document.getElementById('sensor-warn');
+  if (warn) warn.style.display = 'none';
+}
+
+// ══════════════════════════════════════════
+// GERÄTEHALTUNG INFO
+// ══════════════════════════════════════════
+function showHoldingInfo() {
+  document.getElementById('holding-info').style.display = 'flex';
+}
+function dismissHoldingInfo() {
+  document.getElementById('holding-info').style.display = 'none';
+}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+updateHUD();
+setSpeed(15);
+drawLmSky(5);
+setMag(3);
+checkSensorStatus();
+</script>
+</body>
+</html>
